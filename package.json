@@ -12,7 +12,8 @@
     "browser"
   ],
   "dependencies": {
-    "imap": "git://github.com/mscdex/node-imap.git"
+    "imap": "git://github.com/mscdex/node-imap.git",
+    "net-chromify": "git://github.com/iceddev/net-chromify.git"
   },
   "author": {
     "name": "xxx",
