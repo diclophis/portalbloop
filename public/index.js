@@ -10,7 +10,8 @@ var imap = new Imap({
   host: 'portalbloop.risingcode.com',
   port: 8000,
   secure: false,
-  connTimeout: 120 * 1000
+  connTimeout: 120 * 1000,
+  debug: function(w) { console.log(w); }
 });
 
 function die(err) {
@@ -27,7 +28,6 @@ function bloop() {
   });
 */
   function openInbox(cb) {
-    return;
     imap.connect(function(err) {
       if (err) die(err);
       imap.openBox('INBOX', true, cb);

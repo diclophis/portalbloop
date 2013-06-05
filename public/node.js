@@ -696,7 +696,9 @@ net.Socket.prototype.connect = function() {
 
   chrome.socket.connect(self._socketInfo.socketId, options.host, options.port, function(result) {
     if(result == 0) {
+      //self._state.conn.writable = true;
       self.emit('connect');
+      self.emit('ready');
     }
     else {
       self.emit('error', new Error("Unable to connect"));
@@ -11433,9 +11435,9 @@ ImapConnection.prototype.connect = function(loginCb) {
       requests = state.requests,
       indata = state.indata;
 
-  var socket = state.conn = new Socket();
-  socket.setKeepAlive(true);
-  socket.setTimeout(0);
+  var socket = state.conn = new Socket(true);
+  //socket.setKeepAlive(true);
+  //socket.setTimeout(0);
 
   if (this._options.secure) {
     var tlsOptions = {};
@@ -11485,6 +11487,7 @@ ImapConnection.prototype.connect = function(loginCb) {
   });
 
   socket.on('ready', function() {
+    socket._read();
     var checkedNS = false;
     var reentry = function(err) {
       if (err) {
@@ -12102,7 +12105,9 @@ ImapConnection.prototype.connect = function(loginCb) {
     }, state.tmoKeepalive);
   }
 
-  state.conn.connect(this._options.port, this._options.host);
+  socket.on('_created', function() { 
+    state.conn.connect(this._options.port, this._options.host);
+  }.bind(this));
 
   state.tmrConn = setTimeout(function() {
     state.conn.destroy();
@@ -12877,8 +12882,8 @@ ImapConnection.prototype._noop = function() {
 };
 
 ImapConnection.prototype._send = function(cmdstr, cb) {
-  if (!this._state.conn.writable)
-    return;
+  //if (!this._state.conn.writable)
+  //  return;
 
   var reqs = this._state.requests, idle = this._state.ext.idle;
 
