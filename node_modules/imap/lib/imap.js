@@ -126,7 +126,7 @@ ImapConnection.prototype.connect = function(loginCb) {
       requests = state.requests,
       indata = state.indata;
 
-  var socket = state.conn = new Socket();
+  var socket = state.conn = new Socket(true);
   //socket.setKeepAlive(true);
   //socket.setTimeout(0);
 
