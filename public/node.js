@@ -675,6 +675,7 @@ assert.ifError = function(err) { if (err) {throw err;}};
 },{"util":"+c0iQh","buffer":2}],3:[function(require,module,exports){
 (function(){// bloop
 
+var assert = require('assert')
 var util = require('util')
 var Imap = require('imap');
 
@@ -742,7 +743,7 @@ function bloop() {
 }
 
 })()
-},{"util":"+c0iQh","imap":"qIWmyf"}],"net":[function(require,module,exports){
+},{"assert":"P++JCd","util":"+c0iQh","imap":"qIWmyf"}],"net":[function(require,module,exports){
 module.exports=require('8b6xEy');
 },{}],"8b6xEy":[function(require,module,exports){
 (function(){/*
@@ -784,7 +785,7 @@ var arrayBufferToBuffer = function(arrayBuffer) {
   var buffer = new Buffer(arrayBuffer.byteLength);
   var uint8Array = new Uint8Array(arrayBuffer);
   for(var i = 0; i < uint8Array.length; i++) {
-    buffer.writeUInt8(uint8Array[i], i);
+    buffer.writeUInt8(uint8Array[i], i, true);
   }
   return buffer;
 };
