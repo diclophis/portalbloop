@@ -1,10 +1,8 @@
 chrome.app.runtime.onLaunched.addListener(function() {
-  chrome.app.window.create('window.html', {
-    'bounds': {
-      'width': 400,
-      'height': 500
-    }
+  var theWindow = chrome.app.window.create('window.html', {
+    //state: 'fullscreen'
   });
+
   /*
 var ImapConnection = require('./imap').ImapConnection, util = require('util'),
     imap = new ImapConnection({
