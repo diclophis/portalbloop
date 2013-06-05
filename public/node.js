@@ -5640,7 +5640,7 @@ var CHARR_CRLF = [13, 10];
 function line(b, s) {
   var len = b.length, p = b.p, start = p, ret = false, retest = false;
   while (p < len && !ret) {
-    if (b[p] === CHARR_CRLF[s.p]) {
+    if (b.get(p) === CHARR_CRLF[s.p]) {
       if (++s.p === 2)
         ret = true;
     } else {
@@ -11507,17 +11507,19 @@ ImapConnection.prototype.connect = function(loginCb) {
       // server
       self._send('LIST "" ""', loginCb);
     };
-    // First, get the supported (pre-auth or otherwise) capabilities:
-    self._send('CAPABILITY', function() {
-      // No need to attempt the login sequence if we're on a PREAUTH
-      // connection.
-      if (state.status !== STATES.AUTH) {
-        // First get pre-auth capabilities, including server-supported auth
-        // mechanisms
-        self._login(reentry);
-      } else
-        reentry();
-    });
+    setTimeout(function() {
+      // First, get the supported (pre-auth or otherwise) capabilities:
+      self._send('CAPABILITY', function() {
+        // No need to attempt the login sequence if we're on a PREAUTH
+        // connection.
+        if (state.status !== STATES.AUTH) {
+          // First get pre-auth capabilities, including server-supported auth
+          // mechanisms
+          self._login(reentry);
+        } else
+          reentry();
+      });
+    }, 5000); //HACK!
   });
 
   function read(b) {
