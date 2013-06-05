@@ -785,7 +785,7 @@ var arrayBufferToBuffer = function(arrayBuffer) {
   var buffer = new Buffer(arrayBuffer.byteLength);
   var uint8Array = new Uint8Array(arrayBuffer);
   for(var i = 0; i < uint8Array.length; i++) {
-    buffer.writeUInt8(uint8Array[i], i);
+    buffer.writeUInt8(uint8Array[i], i, true);
   }
   return buffer;
 };
