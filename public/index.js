@@ -1,5 +1,14 @@
 // bloop
 
+//webkitRequestFullScreen();
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.body.onclick = function(ev) {
+    document.body.getElementsByTagName("div")[0].webkitRequestFullscreen();
+    console.log(ev);
+  };
+});
+
 var assert = require('assert')
 var util = require('util')
 var Imap = require('imap');
@@ -13,6 +22,10 @@ var imap = new Imap({
   secure: false,
   connTimeout: 120 * 1000,
   debug: function(w) { console.log(w); }
+});
+
+imap.on('mail', function(mail) {
+  console.log(mail);
 });
 
 function die(err) {
@@ -45,7 +58,7 @@ function bloop() {
             fetch.on('message', function(msg) {
               console.log('Saw message no. ' + msg.seqno);
               msg.on('headers', function(hdrs) {
-                console.log('Headers for no. ' + msg.seqno + ': ' + show(hdrs));
+                console.log('Headers for no. ' + msg.seqno + ': ' + console.log(hdrs));
               });
               msg.on('end', function() {
                 console.log('Finished message no. ' + msg.seqno);
@@ -55,7 +68,7 @@ function bloop() {
         }, function(err) {
           if (err) throw err;
           console.log('Done fetching all messages!');
-          imap.logout();
+          //imap.logout();
         }
       );
     });
