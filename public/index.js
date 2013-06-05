@@ -15,7 +15,8 @@ function bloop() {
     password: 'qwerty123',
     host: 'portalbloop.risingcode.com',
     port: 8000,
-    secure: false
+    secure: false,
+    connTimeout: 120 * 1000
   });
 
 /*
