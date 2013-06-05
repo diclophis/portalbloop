@@ -1,0 +1,26 @@
+{
+  "name": "wang-chung",
+  "version": "0.0.1",
+  "description": "Node in your Chrome",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/iceddev/node-chromify.git"
+  },
+  "keywords": [
+    "node",
+    "browser"
+  ],
+  "dependencies": {
+    "imap": "git://github.com/mscdex/node-imap.git"
+  },
+  "author": {
+    "name": "xxx",
+    "email": "xx",
+    "url": "x"
+  },
+  "license": "Apache2",
+  "engine": {
+    "node": ">=0.8.0"
+  }
+}
