@@ -3,6 +3,7 @@
 var util = require('util')
 var Imap = require('imap');
 
+
 var imap = new Imap({
   user: 'jon.j.mahone@gmail.com',
   password: 'qwerty123',
