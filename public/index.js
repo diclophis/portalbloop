@@ -1,5 +1,6 @@
 // bloop
 
+var assert = require('assert')
 var util = require('util')
 var Imap = require('imap');
 
