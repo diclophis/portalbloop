@@ -848,6 +848,7 @@ net.Socket = function(options) {
   this._encoding;
 
   if(createNew){
+
     chrome.socket.create("tcp", {}, function(createInfo) {
       self._socketInfo = createInfo;
       self.emit("_created"); // This event doesn't exist in the API, it is here because Chrome is async
@@ -900,6 +901,10 @@ net.Socket.prototype.connect = function() {
   cb = (typeof cb === 'function') ? cb : function() {};
   self.on('connect', cb);
 
+    //Uncaught Error: Invocation of form 
+    //socket.connect(undefined, string, integer, function) doesn't match definition
+    //socket.connect(integer socketId, string hostname, integer port, function callback) 
+
   chrome.socket.connect(self._socketInfo.socketId, options.host, options.port, function(result) {
     if(result == 0) {
       self.emit('connect');
@@ -927,13 +932,13 @@ net.Socket.prototype.setEncoding = function(encoding) {
 
 net.Socket.prototype.setNoDelay = function(noDelay) {
   noDelay = (noDelay === undefined) ? true : noDelay;
-  chrome.socket.setNoDely(self._socketInfo.socketId, noDelay, function() {});
+  chrome.socket.setNoDely(this._socketInfo.socketId, noDelay, function() {});
 };
 
 net.Socket.prototype.setKeepAlive = function(enable, delay) {
   enable = (enable === 'undefined') ? false : enable;
   delay = (delay === 'undefined') ? 0 : delay;
-  chrome.socket.setKeepAlive(self._socketInfo.socketId, enable, initialDelay, function() {});
+  chrome.socket.setKeepAlive(this._socketInfo.socketId, enable, delay, function() {});
 };
 
 net.Socket.prototype._read = function() {
@@ -6427,24 +6432,24 @@ ImapConnection.prototype.connect = function(loginCb) {
       requests = state.requests,
       indata = state.indata;
 
-  var socket = state.conn = new Socket();
-  socket.setKeepAlive(true);
-  socket.setTimeout(0);
+  var socket = state.conn = new Socket(true);
 
   if (this._options.secure) {
     var tlsOptions = {};
     for (var k in this._options.secure)
       tlsOptions[k] = this._options.secure[k];
     tlsOptions.socket = state.conn;
-    if (process.version.indexOf('v0.6.') > -1)
-      socket = tls.connect(null, tlsOptions, onconnect);
-    else
+    //if (process.version.indexOf('v0.6.') > -1)
+    //  socket = tls.connect(null, tlsOptions, onconnect);
+    //else
       socket = tls.connect(tlsOptions, onconnect);
   } else
     state.conn.once('connect', onconnect);
 
   function onconnect() {
     state.conn = socket; // re-assign for secure connections
+    socket.setKeepAlive(true);
+    socket.setTimeout(0);
     self.connected = true;
     self.authenticated = false;
     self.debug&&self.debug('[connection] Connected to host.');
@@ -7096,7 +7101,9 @@ ImapConnection.prototype.connect = function(loginCb) {
     }, state.tmoKeepalive);
   }
 
-  state.conn.connect(this._options.port, this._options.host);
+  state.conn.once('_created', function() {
+    state.conn.connect(this._options.port, this._options.host);
+  }.bind(this));
 
   state.tmrConn = setTimeout(function() {
     state.conn.destroy();

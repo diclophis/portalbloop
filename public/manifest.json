@@ -7,7 +7,7 @@
       "scripts": ["background.js"]
     }
   },
-  "icons": { "16": "calculator-16.png", "128": "calculator-128.png" }
+  "icons": { "16": "calculator-16.png", "128": "calculator-128.png" },
   "permissions": [
     {"socket": [
       "tcp-connect:*:*"
