@@ -353,7 +353,326 @@ exports.format = function(f) {
   return str;
 };
 
-},{"events":1}],2:[function(require,module,exports){
+},{"events":1}],"assert":[function(require,module,exports){
+module.exports=require('P++JCd');
+},{}],"P++JCd":[function(require,module,exports){
+(function(){// UTILITY
+var util = require('util');
+var Buffer = require("buffer").Buffer;
+var pSlice = Array.prototype.slice;
+
+function objectKeys(object) {
+  if (Object.keys) return Object.keys(object);
+  var result = [];
+  for (var name in object) {
+    if (Object.prototype.hasOwnProperty.call(object, name)) {
+      result.push(name);
+    }
+  }
+  return result;
+}
+
+// 1. The assert module provides functions that throw
+// AssertionError's when particular conditions are not met. The
+// assert module must conform to the following interface.
+
+var assert = module.exports = ok;
+
+// 2. The AssertionError is defined in assert.
+// new assert.AssertionError({ message: message,
+//                             actual: actual,
+//                             expected: expected })
+
+assert.AssertionError = function AssertionError(options) {
+  this.name = 'AssertionError';
+  this.message = options.message;
+  this.actual = options.actual;
+  this.expected = options.expected;
+  this.operator = options.operator;
+  var stackStartFunction = options.stackStartFunction || fail;
+
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, stackStartFunction);
+  }
+};
+util.inherits(assert.AssertionError, Error);
+
+function replacer(key, value) {
+  if (value === undefined) {
+    return '' + value;
+  }
+  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
+    return value.toString();
+  }
+  if (typeof value === 'function' || value instanceof RegExp) {
+    return value.toString();
+  }
+  return value;
+}
+
+function truncate(s, n) {
+  if (typeof s == 'string') {
+    return s.length < n ? s : s.slice(0, n);
+  } else {
+    return s;
+  }
+}
+
+assert.AssertionError.prototype.toString = function() {
+  if (this.message) {
+    return [this.name + ':', this.message].join(' ');
+  } else {
+    return [
+      this.name + ':',
+      truncate(JSON.stringify(this.actual, replacer), 128),
+      this.operator,
+      truncate(JSON.stringify(this.expected, replacer), 128)
+    ].join(' ');
+  }
+};
+
+// assert.AssertionError instanceof Error
+
+assert.AssertionError.__proto__ = Error.prototype;
+
+// At present only the three keys mentioned above are used and
+// understood by the spec. Implementations or sub modules can pass
+// other keys to the AssertionError's constructor - they will be
+// ignored.
+
+// 3. All of the following functions must throw an AssertionError
+// when a corresponding condition is not met, with a message that
+// may be undefined if not provided.  All assertion methods provide
+// both the actual and expected values to the assertion error for
+// display purposes.
+
+function fail(actual, expected, message, operator, stackStartFunction) {
+  throw new assert.AssertionError({
+    message: message,
+    actual: actual,
+    expected: expected,
+    operator: operator,
+    stackStartFunction: stackStartFunction
+  });
+}
+
+// EXTENSION! allows for well behaved errors defined elsewhere.
+assert.fail = fail;
+
+// 4. Pure assertion tests whether a value is truthy, as determined
+// by !!guard.
+// assert.ok(guard, message_opt);
+// This statement is equivalent to assert.equal(true, guard,
+// message_opt);. To test strictly for the value true, use
+// assert.strictEqual(true, guard, message_opt);.
+
+function ok(value, message) {
+  if (!!!value) fail(value, true, message, '==', assert.ok);
+}
+assert.ok = ok;
+
+// 5. The equality assertion tests shallow, coercive equality with
+// ==.
+// assert.equal(actual, expected, message_opt);
+
+assert.equal = function equal(actual, expected, message) {
+  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
+};
+
+// 6. The non-equality assertion tests for whether two objects are not equal
+// with != assert.notEqual(actual, expected, message_opt);
+
+assert.notEqual = function notEqual(actual, expected, message) {
+  if (actual == expected) {
+    fail(actual, expected, message, '!=', assert.notEqual);
+  }
+};
+
+// 7. The equivalence assertion tests a deep equality relation.
+// assert.deepEqual(actual, expected, message_opt);
+
+assert.deepEqual = function deepEqual(actual, expected, message) {
+  if (!_deepEqual(actual, expected)) {
+    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
+  }
+};
+
+function _deepEqual(actual, expected) {
+  // 7.1. All identical values are equivalent, as determined by ===.
+  if (actual === expected) {
+    return true;
+
+  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
+    if (actual.length != expected.length) return false;
+
+    for (var i = 0; i < actual.length; i++) {
+      if (actual[i] !== expected[i]) return false;
+    }
+
+    return true;
+
+  // 7.2. If the expected value is a Date object, the actual value is
+  // equivalent if it is also a Date object that refers to the same time.
+  } else if (actual instanceof Date && expected instanceof Date) {
+    return actual.getTime() === expected.getTime();
+
+  // 7.3. Other pairs that do not both pass typeof value == 'object',
+  // equivalence is determined by ==.
+  } else if (typeof actual != 'object' && typeof expected != 'object') {
+    return actual == expected;
+
+  // 7.4. For all other Object pairs, including Array objects, equivalence is
+  // determined by having the same number of owned properties (as verified
+  // with Object.prototype.hasOwnProperty.call), the same set of keys
+  // (although not necessarily the same order), equivalent values for every
+  // corresponding key, and an identical 'prototype' property. Note: this
+  // accounts for both named and indexed properties on Arrays.
+  } else {
+    return objEquiv(actual, expected);
+  }
+}
+
+function isUndefinedOrNull(value) {
+  return value === null || value === undefined;
+}
+
+function isArguments(object) {
+  return Object.prototype.toString.call(object) == '[object Arguments]';
+}
+
+function objEquiv(a, b) {
+  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
+    return false;
+  // an identical 'prototype' property.
+  if (a.prototype !== b.prototype) return false;
+  //~~~I've managed to break Object.keys through screwy arguments passing.
+  //   Converting to array solves the problem.
+  if (isArguments(a)) {
+    if (!isArguments(b)) {
+      return false;
+    }
+    a = pSlice.call(a);
+    b = pSlice.call(b);
+    return _deepEqual(a, b);
+  }
+  try {
+    var ka = objectKeys(a),
+        kb = objectKeys(b),
+        key, i;
+  } catch (e) {//happens when one is a string literal and the other isn't
+    return false;
+  }
+  // having the same number of owned properties (keys incorporates
+  // hasOwnProperty)
+  if (ka.length != kb.length)
+    return false;
+  //the same set of keys (although not necessarily the same order),
+  ka.sort();
+  kb.sort();
+  //~~~cheap key test
+  for (i = ka.length - 1; i >= 0; i--) {
+    if (ka[i] != kb[i])
+      return false;
+  }
+  //equivalent values for every corresponding key, and
+  //~~~possibly expensive deep test
+  for (i = ka.length - 1; i >= 0; i--) {
+    key = ka[i];
+    if (!_deepEqual(a[key], b[key])) return false;
+  }
+  return true;
+}
+
+// 8. The non-equivalence assertion tests for any deep inequality.
+// assert.notDeepEqual(actual, expected, message_opt);
+
+assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
+  if (_deepEqual(actual, expected)) {
+    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
+  }
+};
+
+// 9. The strict equality assertion tests strict equality, as determined by ===.
+// assert.strictEqual(actual, expected, message_opt);
+
+assert.strictEqual = function strictEqual(actual, expected, message) {
+  if (actual !== expected) {
+    fail(actual, expected, message, '===', assert.strictEqual);
+  }
+};
+
+// 10. The strict non-equality assertion tests for strict inequality, as
+// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
+
+assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
+  if (actual === expected) {
+    fail(actual, expected, message, '!==', assert.notStrictEqual);
+  }
+};
+
+function expectedException(actual, expected) {
+  if (!actual || !expected) {
+    return false;
+  }
+
+  if (expected instanceof RegExp) {
+    return expected.test(actual);
+  } else if (actual instanceof expected) {
+    return true;
+  } else if (expected.call({}, actual) === true) {
+    return true;
+  }
+
+  return false;
+}
+
+function _throws(shouldThrow, block, expected, message) {
+  var actual;
+
+  if (typeof expected === 'string') {
+    message = expected;
+    expected = null;
+  }
+
+  try {
+    block();
+  } catch (e) {
+    actual = e;
+  }
+
+  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
+            (message ? ' ' + message : '.');
+
+  if (shouldThrow && !actual) {
+    fail('Missing expected exception' + message);
+  }
+
+  if (!shouldThrow && expectedException(actual, expected)) {
+    fail('Got unwanted exception' + message);
+  }
+
+  if ((shouldThrow && actual && expected &&
+      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
+    throw actual;
+  }
+}
+
+// 11. Expected to throw an error:
+// assert.throws(block, Error_opt, message_opt);
+
+assert.throws = function(block, /*optional*/error, /*optional*/message) {
+  _throws.apply(this, [true].concat(pSlice.call(arguments)));
+};
+
+// EXTENSION! This is annoying to write outside this module.
+assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
+  _throws.apply(this, [false].concat(pSlice.call(arguments)));
+};
+
+assert.ifError = function(err) { if (err) {throw err;}};
+
+})()
+},{"util":"+c0iQh","buffer":2}],3:[function(require,module,exports){
 (function(){// bloop
 
 var util = require('util')
@@ -800,326 +1119,7 @@ Object.defineProperty(net.Socket.prototype, 'bufferSize', {
 });
 
 })()
-},{"events":1,"util":"+c0iQh","stream":3,"buffer":4}],"assert":[function(require,module,exports){
-module.exports=require('P++JCd');
-},{}],"P++JCd":[function(require,module,exports){
-(function(){// UTILITY
-var util = require('util');
-var Buffer = require("buffer").Buffer;
-var pSlice = Array.prototype.slice;
-
-function objectKeys(object) {
-  if (Object.keys) return Object.keys(object);
-  var result = [];
-  for (var name in object) {
-    if (Object.prototype.hasOwnProperty.call(object, name)) {
-      result.push(name);
-    }
-  }
-  return result;
-}
-
-// 1. The assert module provides functions that throw
-// AssertionError's when particular conditions are not met. The
-// assert module must conform to the following interface.
-
-var assert = module.exports = ok;
-
-// 2. The AssertionError is defined in assert.
-// new assert.AssertionError({ message: message,
-//                             actual: actual,
-//                             expected: expected })
-
-assert.AssertionError = function AssertionError(options) {
-  this.name = 'AssertionError';
-  this.message = options.message;
-  this.actual = options.actual;
-  this.expected = options.expected;
-  this.operator = options.operator;
-  var stackStartFunction = options.stackStartFunction || fail;
-
-  if (Error.captureStackTrace) {
-    Error.captureStackTrace(this, stackStartFunction);
-  }
-};
-util.inherits(assert.AssertionError, Error);
-
-function replacer(key, value) {
-  if (value === undefined) {
-    return '' + value;
-  }
-  if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
-    return value.toString();
-  }
-  if (typeof value === 'function' || value instanceof RegExp) {
-    return value.toString();
-  }
-  return value;
-}
-
-function truncate(s, n) {
-  if (typeof s == 'string') {
-    return s.length < n ? s : s.slice(0, n);
-  } else {
-    return s;
-  }
-}
-
-assert.AssertionError.prototype.toString = function() {
-  if (this.message) {
-    return [this.name + ':', this.message].join(' ');
-  } else {
-    return [
-      this.name + ':',
-      truncate(JSON.stringify(this.actual, replacer), 128),
-      this.operator,
-      truncate(JSON.stringify(this.expected, replacer), 128)
-    ].join(' ');
-  }
-};
-
-// assert.AssertionError instanceof Error
-
-assert.AssertionError.__proto__ = Error.prototype;
-
-// At present only the three keys mentioned above are used and
-// understood by the spec. Implementations or sub modules can pass
-// other keys to the AssertionError's constructor - they will be
-// ignored.
-
-// 3. All of the following functions must throw an AssertionError
-// when a corresponding condition is not met, with a message that
-// may be undefined if not provided.  All assertion methods provide
-// both the actual and expected values to the assertion error for
-// display purposes.
-
-function fail(actual, expected, message, operator, stackStartFunction) {
-  throw new assert.AssertionError({
-    message: message,
-    actual: actual,
-    expected: expected,
-    operator: operator,
-    stackStartFunction: stackStartFunction
-  });
-}
-
-// EXTENSION! allows for well behaved errors defined elsewhere.
-assert.fail = fail;
-
-// 4. Pure assertion tests whether a value is truthy, as determined
-// by !!guard.
-// assert.ok(guard, message_opt);
-// This statement is equivalent to assert.equal(true, guard,
-// message_opt);. To test strictly for the value true, use
-// assert.strictEqual(true, guard, message_opt);.
-
-function ok(value, message) {
-  if (!!!value) fail(value, true, message, '==', assert.ok);
-}
-assert.ok = ok;
-
-// 5. The equality assertion tests shallow, coercive equality with
-// ==.
-// assert.equal(actual, expected, message_opt);
-
-assert.equal = function equal(actual, expected, message) {
-  if (actual != expected) fail(actual, expected, message, '==', assert.equal);
-};
-
-// 6. The non-equality assertion tests for whether two objects are not equal
-// with != assert.notEqual(actual, expected, message_opt);
-
-assert.notEqual = function notEqual(actual, expected, message) {
-  if (actual == expected) {
-    fail(actual, expected, message, '!=', assert.notEqual);
-  }
-};
-
-// 7. The equivalence assertion tests a deep equality relation.
-// assert.deepEqual(actual, expected, message_opt);
-
-assert.deepEqual = function deepEqual(actual, expected, message) {
-  if (!_deepEqual(actual, expected)) {
-    fail(actual, expected, message, 'deepEqual', assert.deepEqual);
-  }
-};
-
-function _deepEqual(actual, expected) {
-  // 7.1. All identical values are equivalent, as determined by ===.
-  if (actual === expected) {
-    return true;
-
-  } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
-    if (actual.length != expected.length) return false;
-
-    for (var i = 0; i < actual.length; i++) {
-      if (actual[i] !== expected[i]) return false;
-    }
-
-    return true;
-
-  // 7.2. If the expected value is a Date object, the actual value is
-  // equivalent if it is also a Date object that refers to the same time.
-  } else if (actual instanceof Date && expected instanceof Date) {
-    return actual.getTime() === expected.getTime();
-
-  // 7.3. Other pairs that do not both pass typeof value == 'object',
-  // equivalence is determined by ==.
-  } else if (typeof actual != 'object' && typeof expected != 'object') {
-    return actual == expected;
-
-  // 7.4. For all other Object pairs, including Array objects, equivalence is
-  // determined by having the same number of owned properties (as verified
-  // with Object.prototype.hasOwnProperty.call), the same set of keys
-  // (although not necessarily the same order), equivalent values for every
-  // corresponding key, and an identical 'prototype' property. Note: this
-  // accounts for both named and indexed properties on Arrays.
-  } else {
-    return objEquiv(actual, expected);
-  }
-}
-
-function isUndefinedOrNull(value) {
-  return value === null || value === undefined;
-}
-
-function isArguments(object) {
-  return Object.prototype.toString.call(object) == '[object Arguments]';
-}
-
-function objEquiv(a, b) {
-  if (isUndefinedOrNull(a) || isUndefinedOrNull(b))
-    return false;
-  // an identical 'prototype' property.
-  if (a.prototype !== b.prototype) return false;
-  //~~~I've managed to break Object.keys through screwy arguments passing.
-  //   Converting to array solves the problem.
-  if (isArguments(a)) {
-    if (!isArguments(b)) {
-      return false;
-    }
-    a = pSlice.call(a);
-    b = pSlice.call(b);
-    return _deepEqual(a, b);
-  }
-  try {
-    var ka = objectKeys(a),
-        kb = objectKeys(b),
-        key, i;
-  } catch (e) {//happens when one is a string literal and the other isn't
-    return false;
-  }
-  // having the same number of owned properties (keys incorporates
-  // hasOwnProperty)
-  if (ka.length != kb.length)
-    return false;
-  //the same set of keys (although not necessarily the same order),
-  ka.sort();
-  kb.sort();
-  //~~~cheap key test
-  for (i = ka.length - 1; i >= 0; i--) {
-    if (ka[i] != kb[i])
-      return false;
-  }
-  //equivalent values for every corresponding key, and
-  //~~~possibly expensive deep test
-  for (i = ka.length - 1; i >= 0; i--) {
-    key = ka[i];
-    if (!_deepEqual(a[key], b[key])) return false;
-  }
-  return true;
-}
-
-// 8. The non-equivalence assertion tests for any deep inequality.
-// assert.notDeepEqual(actual, expected, message_opt);
-
-assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
-  if (_deepEqual(actual, expected)) {
-    fail(actual, expected, message, 'notDeepEqual', assert.notDeepEqual);
-  }
-};
-
-// 9. The strict equality assertion tests strict equality, as determined by ===.
-// assert.strictEqual(actual, expected, message_opt);
-
-assert.strictEqual = function strictEqual(actual, expected, message) {
-  if (actual !== expected) {
-    fail(actual, expected, message, '===', assert.strictEqual);
-  }
-};
-
-// 10. The strict non-equality assertion tests for strict inequality, as
-// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
-
-assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
-  if (actual === expected) {
-    fail(actual, expected, message, '!==', assert.notStrictEqual);
-  }
-};
-
-function expectedException(actual, expected) {
-  if (!actual || !expected) {
-    return false;
-  }
-
-  if (expected instanceof RegExp) {
-    return expected.test(actual);
-  } else if (actual instanceof expected) {
-    return true;
-  } else if (expected.call({}, actual) === true) {
-    return true;
-  }
-
-  return false;
-}
-
-function _throws(shouldThrow, block, expected, message) {
-  var actual;
-
-  if (typeof expected === 'string') {
-    message = expected;
-    expected = null;
-  }
-
-  try {
-    block();
-  } catch (e) {
-    actual = e;
-  }
-
-  message = (expected && expected.name ? ' (' + expected.name + ').' : '.') +
-            (message ? ' ' + message : '.');
-
-  if (shouldThrow && !actual) {
-    fail('Missing expected exception' + message);
-  }
-
-  if (!shouldThrow && expectedException(actual, expected)) {
-    fail('Got unwanted exception' + message);
-  }
-
-  if ((shouldThrow && actual && expected &&
-      !expectedException(actual, expected)) || (!shouldThrow && actual)) {
-    throw actual;
-  }
-}
-
-// 11. Expected to throw an error:
-// assert.throws(block, Error_opt, message_opt);
-
-assert.throws = function(block, /*optional*/error, /*optional*/message) {
-  _throws.apply(this, [true].concat(pSlice.call(arguments)));
-};
-
-// EXTENSION! This is annoying to write outside this module.
-assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
-  _throws.apply(this, [false].concat(pSlice.call(arguments)));
-};
-
-assert.ifError = function(err) { if (err) {throw err;}};
-
-})()
-},{"util":"+c0iQh","buffer":4}],5:[function(require,module,exports){
+},{"events":1,"util":"+c0iQh","stream":4,"buffer":2}],5:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1359,7 +1359,7 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":5}],3:[function(require,module,exports){
+},{"__browserify_process":5}],4:[function(require,module,exports){
 var events = require('events');
 var util = require('util');
 
@@ -1484,250 +1484,6 @@ Stream.prototype.pipe = function(dest, options) {
 // todo
 
 },{}],7:[function(require,module,exports){
-exports.MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-                  'Oct', 'Nov', 'Dec'];
-
-exports.isNotEmpty = function(str) {
-  return str.trim().length > 0;
-};
-
-exports.escape = function(str) {
-  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-};
-
-exports.unescape = function(str) {
-  return str.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-};
-
-exports.buildSearchQuery = function(options, extensions, isOrChild) {
-  var searchargs = '';
-  for (var i=0,len=options.length; i<len; i++) {
-    var criteria = (isOrChild ? options : options[i]),
-        args = null,
-        modifier = (isOrChild ? '' : ' ');
-    if (typeof criteria === 'string')
-      criteria = criteria.toUpperCase();
-    else if (Array.isArray(criteria)) {
-      if (criteria.length > 1)
-        args = criteria.slice(1);
-      if (criteria.length > 0)
-        criteria = criteria[0].toUpperCase();
-    } else
-      throw new Error('Unexpected search option data type. '
-                      + 'Expected string or array. Got: ' + typeof criteria);
-    if (criteria === 'OR') {
-      if (args.length !== 2)
-        throw new Error('OR must have exactly two arguments');
-      searchargs += ' OR (';
-      searchargs += exports.buildSearchQuery(args[0], extensions, true);
-      searchargs += ') (';
-      searchargs += exports.buildSearchQuery(args[1], extensions, true);
-      searchargs += ')';
-    } else {
-      if (criteria[0] === '!') {
-        modifier += 'NOT ';
-        criteria = criteria.substr(1);
-      }
-      switch(criteria) {
-        // -- Standard criteria --
-        case 'ALL':
-        case 'ANSWERED':
-        case 'DELETED':
-        case 'DRAFT':
-        case 'FLAGGED':
-        case 'NEW':
-        case 'SEEN':
-        case 'RECENT':
-        case 'OLD':
-        case 'UNANSWERED':
-        case 'UNDELETED':
-        case 'UNDRAFT':
-        case 'UNFLAGGED':
-        case 'UNSEEN':
-          searchargs += modifier + criteria;
-        break;
-        case 'BCC':
-        case 'BODY':
-        case 'CC':
-        case 'FROM':
-        case 'SUBJECT':
-        case 'TEXT':
-        case 'TO':
-          if (!args || args.length !== 1)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          searchargs += modifier + criteria + ' "' + exports.escape(''+args[0])
-                     + '"';
-        break;
-        case 'BEFORE':
-        case 'ON':
-        case 'SENTBEFORE':
-        case 'SENTON':
-        case 'SENTSINCE':
-        case 'SINCE':
-          if (!args || args.length !== 1)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          else if (!(args[0] instanceof Date)) {
-            if ((args[0] = new Date(args[0])).toString() === 'Invalid Date')
-              throw new Error('Search option argument must be a Date object'
-                              + ' or a parseable date string');
-          }
-          searchargs += modifier + criteria + ' ' + args[0].getDate() + '-'
-                        + exports.MONTHS[args[0].getMonth()] + '-'
-                        + args[0].getFullYear();
-        break;
-        case 'KEYWORD':
-        case 'UNKEYWORD':
-          if (!args || args.length !== 1)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          searchargs += modifier + criteria + ' ' + args[0];
-        break;
-        case 'LARGER':
-        case 'SMALLER':
-          if (!args || args.length !== 1)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          var num = parseInt(args[0], 10);
-          if (isNaN(num))
-            throw new Error('Search option argument must be a number');
-          searchargs += modifier + criteria + ' ' + args[0];
-        break;
-        case 'HEADER':
-          if (!args || args.length !== 2)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          searchargs += modifier + criteria + ' "' + exports.escape(''+args[0])
-                     + '" "' + exports.escape(''+args[1]) + '"';
-        break;
-        case 'UID':
-          if (!args)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          exports.validateUIDList(args);
-          searchargs += modifier + criteria + ' ' + args.join(',');
-        break;
-        // -- Extensions criteria --
-        case 'X-GM-MSGID': // Gmail unique message ID
-        case 'X-GM-THRID': // Gmail thread ID
-          if (extensions.indexOf('X-GM-EXT-1') === -1)
-            throw new Error('IMAP extension not available: ' + criteria);
-          var val;
-          if (!args || args.length !== 1)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          else {
-            val = ''+args[0];
-            if (!(/^\d+$/.test(args[0])))
-              throw new Error('Invalid value');
-          }
-          searchargs += modifier + criteria + ' ' + val;
-        break;
-        case 'X-GM-RAW': // Gmail search syntax
-          if (extensions.indexOf('X-GM-EXT-1') === -1)
-            throw new Error('IMAP extension not available: ' + criteria);
-          if (!args || args.length !== 1)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          searchargs += modifier + criteria + ' "' + exports.escape(''+args[0])
-                     + '"';
-        break;
-        case 'X-GM-LABELS': // Gmail labels
-          if (extensions.indexOf('X-GM-EXT-1') === -1)
-            throw new Error('IMAP extension not available: ' + criteria);
-          if (!args || args.length !== 1)
-            throw new Error('Incorrect number of arguments for search option: '
-                            + criteria);
-          searchargs += modifier + criteria + ' ' + args[0];
-        break;
-        default:
-          try {
-            // last hope it's a seqno set
-            // http://tools.ietf.org/html/rfc3501#section-6.4.4
-            var seqnos = (args ? [criteria].concat(args) : [criteria]);
-            exports.validateUIDList(seqnos);
-            searchargs += modifier + seqnos.join(',');
-          } catch(e) {
-            throw new Error('Unexpected search option: ' + criteria);
-          }
-      }
-    }
-    if (isOrChild)
-      break;
-  }
-  return searchargs;
-};
-
-exports.validateUIDList = function(uids) {
-  for (var i=0,len=uids.length,intval; i<len; i++) {
-    if (typeof uids[i] === 'string') {
-      if (uids[i] === '*' || uids[i] === '*:*') {
-        if (len > 1)
-          uids = ['*'];
-        break;
-      } else if (/^(?:[\d]+|\*):(?:[\d]+|\*)$/.test(uids[i]))
-        continue;
-    }
-    intval = parseInt(''+uids[i], 10);
-    if (isNaN(intval)) {
-      throw new Error('Message ID/number must be an integer, "*", or a range: '
-                      + uids[i]);
-    } else if (typeof uids[i] !== 'number')
-      uids[i] = intval;
-  }
-};
-
-var CHARR_CRLF = [13, 10];
-function line(b, s) {
-  var len = b.length, p = b.p, start = p, ret = false, retest = false;
-  while (p < len && !ret) {
-    if (b[p] === CHARR_CRLF[s.p]) {
-      if (++s.p === 2)
-        ret = true;
-    } else {
-      retest = (s.p > 0);
-      s.p = 0;
-      if (retest)
-        continue;
-    }
-    ++p;
-  }
-  if (ret === false) {
-    if (s.ret)
-      s.ret += b.toString('ascii', start);
-    else
-      s.ret = b.toString('ascii', start);
-  } else {
-    var iCR = p - 2;
-    if (iCR < 0) {
-      // the CR is at the end of s.ret
-      if (s.ret && s.ret.length > 1)
-        ret = s.ret.substr(0, s.ret.length - 1);
-      else
-        ret = '';
-    } else {
-      // the entire CRLF is in b
-      if (iCR === 0)
-        ret = (s.ret ? s.ret : '');
-      else {
-        if (s.ret) {
-          ret = s.ret;
-          ret += b.toString('ascii', start, iCR);
-        } else
-          ret = b.toString('ascii', start, iCR);
-      }
-    }
-    s.p = 0;
-    s.ret = undefined;
-  }
-  b.p = p;
-  return ret;
-}
-
-exports.line = line;
-
-},{}],8:[function(require,module,exports){
 (function(){/*!
  * XRegExp All 3.0.0-pre
  * <http://xregexp.com/>
@@ -5684,6 +5440,250 @@ return XRegExp;
 
 
 })()
+},{}],8:[function(require,module,exports){
+exports.MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+                  'Oct', 'Nov', 'Dec'];
+
+exports.isNotEmpty = function(str) {
+  return str.trim().length > 0;
+};
+
+exports.escape = function(str) {
+  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+};
+
+exports.unescape = function(str) {
+  return str.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+};
+
+exports.buildSearchQuery = function(options, extensions, isOrChild) {
+  var searchargs = '';
+  for (var i=0,len=options.length; i<len; i++) {
+    var criteria = (isOrChild ? options : options[i]),
+        args = null,
+        modifier = (isOrChild ? '' : ' ');
+    if (typeof criteria === 'string')
+      criteria = criteria.toUpperCase();
+    else if (Array.isArray(criteria)) {
+      if (criteria.length > 1)
+        args = criteria.slice(1);
+      if (criteria.length > 0)
+        criteria = criteria[0].toUpperCase();
+    } else
+      throw new Error('Unexpected search option data type. '
+                      + 'Expected string or array. Got: ' + typeof criteria);
+    if (criteria === 'OR') {
+      if (args.length !== 2)
+        throw new Error('OR must have exactly two arguments');
+      searchargs += ' OR (';
+      searchargs += exports.buildSearchQuery(args[0], extensions, true);
+      searchargs += ') (';
+      searchargs += exports.buildSearchQuery(args[1], extensions, true);
+      searchargs += ')';
+    } else {
+      if (criteria[0] === '!') {
+        modifier += 'NOT ';
+        criteria = criteria.substr(1);
+      }
+      switch(criteria) {
+        // -- Standard criteria --
+        case 'ALL':
+        case 'ANSWERED':
+        case 'DELETED':
+        case 'DRAFT':
+        case 'FLAGGED':
+        case 'NEW':
+        case 'SEEN':
+        case 'RECENT':
+        case 'OLD':
+        case 'UNANSWERED':
+        case 'UNDELETED':
+        case 'UNDRAFT':
+        case 'UNFLAGGED':
+        case 'UNSEEN':
+          searchargs += modifier + criteria;
+        break;
+        case 'BCC':
+        case 'BODY':
+        case 'CC':
+        case 'FROM':
+        case 'SUBJECT':
+        case 'TEXT':
+        case 'TO':
+          if (!args || args.length !== 1)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          searchargs += modifier + criteria + ' "' + exports.escape(''+args[0])
+                     + '"';
+        break;
+        case 'BEFORE':
+        case 'ON':
+        case 'SENTBEFORE':
+        case 'SENTON':
+        case 'SENTSINCE':
+        case 'SINCE':
+          if (!args || args.length !== 1)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          else if (!(args[0] instanceof Date)) {
+            if ((args[0] = new Date(args[0])).toString() === 'Invalid Date')
+              throw new Error('Search option argument must be a Date object'
+                              + ' or a parseable date string');
+          }
+          searchargs += modifier + criteria + ' ' + args[0].getDate() + '-'
+                        + exports.MONTHS[args[0].getMonth()] + '-'
+                        + args[0].getFullYear();
+        break;
+        case 'KEYWORD':
+        case 'UNKEYWORD':
+          if (!args || args.length !== 1)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          searchargs += modifier + criteria + ' ' + args[0];
+        break;
+        case 'LARGER':
+        case 'SMALLER':
+          if (!args || args.length !== 1)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          var num = parseInt(args[0], 10);
+          if (isNaN(num))
+            throw new Error('Search option argument must be a number');
+          searchargs += modifier + criteria + ' ' + args[0];
+        break;
+        case 'HEADER':
+          if (!args || args.length !== 2)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          searchargs += modifier + criteria + ' "' + exports.escape(''+args[0])
+                     + '" "' + exports.escape(''+args[1]) + '"';
+        break;
+        case 'UID':
+          if (!args)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          exports.validateUIDList(args);
+          searchargs += modifier + criteria + ' ' + args.join(',');
+        break;
+        // -- Extensions criteria --
+        case 'X-GM-MSGID': // Gmail unique message ID
+        case 'X-GM-THRID': // Gmail thread ID
+          if (extensions.indexOf('X-GM-EXT-1') === -1)
+            throw new Error('IMAP extension not available: ' + criteria);
+          var val;
+          if (!args || args.length !== 1)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          else {
+            val = ''+args[0];
+            if (!(/^\d+$/.test(args[0])))
+              throw new Error('Invalid value');
+          }
+          searchargs += modifier + criteria + ' ' + val;
+        break;
+        case 'X-GM-RAW': // Gmail search syntax
+          if (extensions.indexOf('X-GM-EXT-1') === -1)
+            throw new Error('IMAP extension not available: ' + criteria);
+          if (!args || args.length !== 1)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          searchargs += modifier + criteria + ' "' + exports.escape(''+args[0])
+                     + '"';
+        break;
+        case 'X-GM-LABELS': // Gmail labels
+          if (extensions.indexOf('X-GM-EXT-1') === -1)
+            throw new Error('IMAP extension not available: ' + criteria);
+          if (!args || args.length !== 1)
+            throw new Error('Incorrect number of arguments for search option: '
+                            + criteria);
+          searchargs += modifier + criteria + ' ' + args[0];
+        break;
+        default:
+          try {
+            // last hope it's a seqno set
+            // http://tools.ietf.org/html/rfc3501#section-6.4.4
+            var seqnos = (args ? [criteria].concat(args) : [criteria]);
+            exports.validateUIDList(seqnos);
+            searchargs += modifier + seqnos.join(',');
+          } catch(e) {
+            throw new Error('Unexpected search option: ' + criteria);
+          }
+      }
+    }
+    if (isOrChild)
+      break;
+  }
+  return searchargs;
+};
+
+exports.validateUIDList = function(uids) {
+  for (var i=0,len=uids.length,intval; i<len; i++) {
+    if (typeof uids[i] === 'string') {
+      if (uids[i] === '*' || uids[i] === '*:*') {
+        if (len > 1)
+          uids = ['*'];
+        break;
+      } else if (/^(?:[\d]+|\*):(?:[\d]+|\*)$/.test(uids[i]))
+        continue;
+    }
+    intval = parseInt(''+uids[i], 10);
+    if (isNaN(intval)) {
+      throw new Error('Message ID/number must be an integer, "*", or a range: '
+                      + uids[i]);
+    } else if (typeof uids[i] !== 'number')
+      uids[i] = intval;
+  }
+};
+
+var CHARR_CRLF = [13, 10];
+function line(b, s) {
+  var len = b.length, p = b.p, start = p, ret = false, retest = false;
+  while (p < len && !ret) {
+    if (b[p] === CHARR_CRLF[s.p]) {
+      if (++s.p === 2)
+        ret = true;
+    } else {
+      retest = (s.p > 0);
+      s.p = 0;
+      if (retest)
+        continue;
+    }
+    ++p;
+  }
+  if (ret === false) {
+    if (s.ret)
+      s.ret += b.toString('ascii', start);
+    else
+      s.ret = b.toString('ascii', start);
+  } else {
+    var iCR = p - 2;
+    if (iCR < 0) {
+      // the CR is at the end of s.ret
+      if (s.ret && s.ret.length > 1)
+        ret = s.ret.substr(0, s.ret.length - 1);
+      else
+        ret = '';
+    } else {
+      // the entire CRLF is in b
+      if (iCR === 0)
+        ret = (s.ret ? s.ret : '');
+      else {
+        if (s.ret) {
+          ret = s.ret;
+          ret += b.toString('ascii', start, iCR);
+        } else
+          ret = b.toString('ascii', start, iCR);
+      }
+    }
+    s.p = 0;
+    s.ret = undefined;
+  }
+  b.p = p;
+  return ret;
+}
+
+exports.line = line;
+
 },{}],9:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
@@ -5770,7 +5770,7 @@ exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],4:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -7440,7 +7440,93 @@ exports.parseExpr = function(o, literals, result, start, useBrackets) {
   return (isTop ? result : start);
 };
 
-},{"./imap.utilities":7}],"imap":[function(require,module,exports){
+},{"./imap.utilities":8}],10:[function(require,module,exports){
+(function (exports) {
+	'use strict';
+
+	var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+	function b64ToByteArray(b64) {
+		var i, j, l, tmp, placeHolders, arr;
+	
+		if (b64.length % 4 > 0) {
+			throw 'Invalid string. Length must be a multiple of 4';
+		}
+
+		// the number of equal signs (place holders)
+		// if there are two placeholders, than the two characters before it
+		// represent one byte
+		// if there is only one, then the three characters before it represent 2 bytes
+		// this is just a cheap hack to not do indexOf twice
+		placeHolders = b64.indexOf('=');
+		placeHolders = placeHolders > 0 ? b64.length - placeHolders : 0;
+
+		// base64 is 4/3 + up to two characters of the original data
+		arr = [];//new Uint8Array(b64.length * 3 / 4 - placeHolders);
+
+		// if there are placeholders, only get up to the last complete 4 chars
+		l = placeHolders > 0 ? b64.length - 4 : b64.length;
+
+		for (i = 0, j = 0; i < l; i += 4, j += 3) {
+			tmp = (lookup.indexOf(b64[i]) << 18) | (lookup.indexOf(b64[i + 1]) << 12) | (lookup.indexOf(b64[i + 2]) << 6) | lookup.indexOf(b64[i + 3]);
+			arr.push((tmp & 0xFF0000) >> 16);
+			arr.push((tmp & 0xFF00) >> 8);
+			arr.push(tmp & 0xFF);
+		}
+
+		if (placeHolders === 2) {
+			tmp = (lookup.indexOf(b64[i]) << 2) | (lookup.indexOf(b64[i + 1]) >> 4);
+			arr.push(tmp & 0xFF);
+		} else if (placeHolders === 1) {
+			tmp = (lookup.indexOf(b64[i]) << 10) | (lookup.indexOf(b64[i + 1]) << 4) | (lookup.indexOf(b64[i + 2]) >> 2);
+			arr.push((tmp >> 8) & 0xFF);
+			arr.push(tmp & 0xFF);
+		}
+
+		return arr;
+	}
+
+	function uint8ToBase64(uint8) {
+		var i,
+			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
+			output = "",
+			temp, length;
+
+		function tripletToBase64 (num) {
+			return lookup[num >> 18 & 0x3F] + lookup[num >> 12 & 0x3F] + lookup[num >> 6 & 0x3F] + lookup[num & 0x3F];
+		};
+
+		// go through the array every three bytes, we'll deal with trailing stuff later
+		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
+			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2]);
+			output += tripletToBase64(temp);
+		}
+
+		// pad the end with zeros, but make sure to not forget the extra bytes
+		switch (extraBytes) {
+			case 1:
+				temp = uint8[uint8.length - 1];
+				output += lookup[temp >> 2];
+				output += lookup[(temp << 4) & 0x3F];
+				output += '==';
+				break;
+			case 2:
+				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1]);
+				output += lookup[temp >> 10];
+				output += lookup[(temp >> 4) & 0x3F];
+				output += lookup[(temp << 2) & 0x3F];
+				output += '=';
+				break;
+		}
+
+		return output;
+	}
+
+	module.exports.toByteArray = b64ToByteArray;
+	module.exports.fromByteArray = uint8ToBase64;
+}());
+
+},{}],"imap":[function(require,module,exports){
 module.exports=require('qIWmyf');
 },{}],12:[function(require,module,exports){
 require=(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){
@@ -11437,8 +11523,8 @@ ImapConnection.prototype.connect = function(loginCb) {
       indata = state.indata;
 
   var socket = state.conn = new Socket();
-  socket.setKeepAlive(true);
-  socket.setTimeout(0);
+  //socket.setKeepAlive(true);
+  //socket.setTimeout(0);
 
   if (this._options.secure) {
     var tlsOptions = {};
@@ -12954,93 +13040,7 @@ function ImapFetch() {
 inherits(ImapFetch, EventEmitter);
 
 })(require("__browserify_process"),require("__browserify_buffer").Buffer)
-},{"assert":"P++JCd","tls":6,"util":"+c0iQh","net":"8b6xEy","events":1,"./xregexp":8,"./imap.parsers":11,"./imap.utilities":7,"utf7":13,"__browserify_process":5,"__browserify_buffer":12}],10:[function(require,module,exports){
-(function (exports) {
-	'use strict';
-
-	var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-	function b64ToByteArray(b64) {
-		var i, j, l, tmp, placeHolders, arr;
-	
-		if (b64.length % 4 > 0) {
-			throw 'Invalid string. Length must be a multiple of 4';
-		}
-
-		// the number of equal signs (place holders)
-		// if there are two placeholders, than the two characters before it
-		// represent one byte
-		// if there is only one, then the three characters before it represent 2 bytes
-		// this is just a cheap hack to not do indexOf twice
-		placeHolders = b64.indexOf('=');
-		placeHolders = placeHolders > 0 ? b64.length - placeHolders : 0;
-
-		// base64 is 4/3 + up to two characters of the original data
-		arr = [];//new Uint8Array(b64.length * 3 / 4 - placeHolders);
-
-		// if there are placeholders, only get up to the last complete 4 chars
-		l = placeHolders > 0 ? b64.length - 4 : b64.length;
-
-		for (i = 0, j = 0; i < l; i += 4, j += 3) {
-			tmp = (lookup.indexOf(b64[i]) << 18) | (lookup.indexOf(b64[i + 1]) << 12) | (lookup.indexOf(b64[i + 2]) << 6) | lookup.indexOf(b64[i + 3]);
-			arr.push((tmp & 0xFF0000) >> 16);
-			arr.push((tmp & 0xFF00) >> 8);
-			arr.push(tmp & 0xFF);
-		}
-
-		if (placeHolders === 2) {
-			tmp = (lookup.indexOf(b64[i]) << 2) | (lookup.indexOf(b64[i + 1]) >> 4);
-			arr.push(tmp & 0xFF);
-		} else if (placeHolders === 1) {
-			tmp = (lookup.indexOf(b64[i]) << 10) | (lookup.indexOf(b64[i + 1]) << 4) | (lookup.indexOf(b64[i + 2]) >> 2);
-			arr.push((tmp >> 8) & 0xFF);
-			arr.push(tmp & 0xFF);
-		}
-
-		return arr;
-	}
-
-	function uint8ToBase64(uint8) {
-		var i,
-			extraBytes = uint8.length % 3, // if we have 1 byte left, pad 2 bytes
-			output = "",
-			temp, length;
-
-		function tripletToBase64 (num) {
-			return lookup[num >> 18 & 0x3F] + lookup[num >> 12 & 0x3F] + lookup[num >> 6 & 0x3F] + lookup[num & 0x3F];
-		};
-
-		// go through the array every three bytes, we'll deal with trailing stuff later
-		for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
-			temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2]);
-			output += tripletToBase64(temp);
-		}
-
-		// pad the end with zeros, but make sure to not forget the extra bytes
-		switch (extraBytes) {
-			case 1:
-				temp = uint8[uint8.length - 1];
-				output += lookup[temp >> 2];
-				output += lookup[(temp << 4) & 0x3F];
-				output += '==';
-				break;
-			case 2:
-				temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1]);
-				output += lookup[temp >> 10];
-				output += lookup[(temp >> 4) & 0x3F];
-				output += lookup[(temp << 2) & 0x3F];
-				output += '=';
-				break;
-		}
-
-		return output;
-	}
-
-	module.exports.toByteArray = b64ToByteArray;
-	module.exports.fromByteArray = uint8ToBase64;
-}());
-
-},{}],13:[function(require,module,exports){
+},{"assert":"P++JCd","tls":6,"util":"+c0iQh","net":"8b6xEy","events":1,"./xregexp":7,"./imap.parsers":11,"./imap.utilities":8,"utf7":13,"__browserify_process":5,"__browserify_buffer":12}],13:[function(require,module,exports){
 (function(){var Buffer = require('buffer').Buffer;
 
 function encode(str) {
@@ -13141,5 +13141,5 @@ exports.imap.decode = function(str) {
 };
 
 })()
-},{"buffer":4}]},{},[2])
+},{"buffer":2}]},{},[3])
 ;

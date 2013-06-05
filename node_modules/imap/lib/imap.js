@@ -127,8 +127,8 @@ ImapConnection.prototype.connect = function(loginCb) {
       indata = state.indata;
 
   var socket = state.conn = new Socket();
-  socket.setKeepAlive(true);
-  socket.setTimeout(0);
+  //socket.setKeepAlive(true);
+  //socket.setTimeout(0);
 
   if (this._options.secure) {
     var tlsOptions = {};
