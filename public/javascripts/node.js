@@ -967,6 +967,7 @@ net.Socket = function(options) {
       self.emit("_created"); // This event doesn't exist in the API, it is here because Chrome is async
       // start trying to read
       // self._read();
+
     });
   }
 };
@@ -1016,8 +1017,18 @@ net.Socket.prototype.connect = function() {
 
   chrome.socket.connect(self._socketInfo.socketId, options.host, options.port, function(result) {
     if(result == 0) {
+
+
+    console.log('install tls here', this);
+
+    self._read();
+
+
+
+
+
       self.emit('connect');
-      self.emit('ready');
+      //self.emit('ready');
     }
     else {
       self.emit('error', new Error("Unable to connect"));
@@ -11459,6 +11470,76 @@ ImapConnection.prototype.connect = function(loginCb) {
     self.authenticated = false;
     self.debug&&self.debug('[connection] Connected to host.');
     state.status = STATES.NOAUTH;
+
+         var tls = forge.tls.createConnection(
+         {
+            server: false,
+            caStore: [],
+            sessionCache: {},
+            // supported cipher suites in order of preference
+            cipherSuites: [
+               forge.tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA,
+               forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA],
+            virtualHost: 'server',
+            verify: function(c, verified, depth, certs)
+            {
+               console.log(
+                  'TLS Client verifying certificate w/CN: \"' +
+                  certs[0].subject.getField('CN').value +
+                  '\", verified: ' + verified + '...');
+               // accept any certificate from the server for this test
+               return true;
+            },
+            connected: function(c)
+            {
+               console.log('Client connected...');
+               
+               // send message to server
+               setTimeout(function()
+               {
+                  c.prepare('Hello Server');
+               }, 1);
+            },
+            getCertificate: function(c, hint)
+            {
+               console.log('Client getting certificate ...');
+               return cert;
+            },
+            getPrivateKey: function(c, cert)
+            {
+               return privateKey;
+            },
+            tlsDataReady: function(c)
+            {
+               // send base64-encoded TLS data to server
+               //ws.send(forge.util.encode64(c.tlsData.getBytes()));
+            },
+            dataReady: function(c)
+            {
+               var response = c.data.getBytes();
+               console.log('Client received \"' + response + '\"');
+               success = (response === 'Hello Client');
+               c.close();
+            },
+            closed: function(c)
+            {
+               console.log('Client disconnected.');
+               if(success)
+               {
+                  console.log('PASS');
+               }
+               else
+               {
+                  console.log('FAIL');
+               }
+            },
+            error: function(c, error)
+            {
+               console.log('Client error: ' + error.message);
+            }
+         });
+
+         tls.handshake();
   };
 
   state.conn.on('end', function() {
@@ -11489,7 +11570,6 @@ ImapConnection.prototype.connect = function(loginCb) {
   });
 
   socket.on('ready', function() {
-    socket._read();
     var checkedNS = false;
     var reentry = function(err) {
       if (err) {
