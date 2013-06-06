@@ -1020,7 +1020,7 @@ tls.parseHelloMessage = function(c, record, length) {
     if(msg.version.major !== tls.Version.major ||
       msg.version.minor !== tls.Version.minor) {
       c.error(c, {
-        message: 'Incompatible TLS version.',
+        message: 'Incompatible TLS version. version major mismatch',
         send: true,
         alert: {
           level: tls.Alert.Level.fatal,
@@ -3937,7 +3937,7 @@ tls.createConnection = function(options) {
       if(c.record.version.major != tls.Version.major ||
         c.record.version.minor != tls.Version.minor) {
         c.error(c, {
-          message: 'Incompatible TLS version.',
+          message: 'Incompatible TLS version. c record version mismatch',
           send: true,
           alert: {
             level: tls.Alert.Level.fatal,

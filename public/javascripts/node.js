@@ -674,74 +674,6 @@ assert.ifError = function(err) { if (err) {throw err;}};
 })()
 },{"util":"+c0iQh","buffer":2}],3:[function(require,module,exports){
 (function(){// bloop
-
-var assert = require('assert')
-var util = require('util')
-var Imap = require('imap');
-
-
-var imap = new Imap({
-  user: 'jon.j.mahone@gmail.com',
-  password: 'qwerty123',
-  host: 'portalbloop.risingcode.com',
-  port: 8000,
-  secure: false
-});
-
-function die(err) {
-  console.log('Uh oh: ' + err);
-  //process.exit(1);
-  throw err;
-}
-
-
-function bloop() {
-
-
-
-
-/*
-  imap.connect(function(err) {
-    if (err) die(err);
-    imap.openBox('INBOX', true, cb);
-  });
-*/
-
-  function openInbox(cb) {
-    return;
-    imap.connect(function(err) {
-      if (err) die(err);
-      imap.openBox('INBOX', true, cb);
-    });
-  }
-
-  openInbox(function(err, mailbox) {
-    if (err) die(err);
-    imap.search([ 'UNSEEN', ['SINCE', 'May 20, 2010'] ], function(err, results) {
-      if (err) die(err);
-      imap.fetch(results,
-        { headers: ['from', 'to', 'subject', 'date'],
-          cb: function(fetch) {
-            fetch.on('message', function(msg) {
-              console.log('Saw message no. ' + msg.seqno);
-              msg.on('headers', function(hdrs) {
-                console.log('Headers for no. ' + msg.seqno + ': ' + show(hdrs));
-              });
-              msg.on('end', function() {
-                console.log('Finished message no. ' + msg.seqno);
-              });
-            });
-          }
-        }, function(err) {
-          if (err) throw err;
-          console.log('Done fetching all messages!');
-          imap.logout();
-        }
-      );
-    });
-  });
-}
-
 })()
 },{"assert":"P++JCd","util":"+c0iQh","imap":"qIWmyf"}],"net":[function(require,module,exports){
 module.exports=require('8b6xEy');
@@ -967,7 +899,6 @@ net.Socket = function(options) {
       self.emit("_created"); // This event doesn't exist in the API, it is here because Chrome is async
       // start trying to read
       // self._read();
-
     });
   }
 };
@@ -1014,12 +945,76 @@ net.Socket.prototype.connect = function() {
   var cb = args[args.length -1];
   cb = (typeof cb === 'function') ? cb : function() {};
   self.on('connect', cb);
-
   chrome.socket.connect(self._socketInfo.socketId, options.host, options.port, function(result) {
     if(result == 0) {
 
 
     console.log('install tls here', this);
+
+         window.TLS = forge.tls.createConnection(
+         {
+            server: false,
+            caStore: [],
+            sessionCache: {},
+            // supported cipher suites in order of preference
+            //cipherSuites: [
+            //   forge.tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA,
+            //   forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA],
+            virtualHost: 'server',
+            verify: function(c, verified, depth, certs)
+            {
+               console.log(
+                  'TLS Client verifying certificate w/CN: \"' +
+                  certs[0].subject.getField('CN').value +
+                  '\", verified: ' + verified + '...');
+               // accept any certificate from the server for this test
+               return true;
+            },
+            connected: function(c)
+            {
+               console.log('Client connected...');
+               
+               // send message to server
+               setTimeout(function()
+               {
+                  c.prepare('Hello Server');
+               }, 1);
+            },
+            getCertificate: function(c, hint)
+            {
+               console.log('Client getting certificate ...');
+               return cert;
+            },
+            getPrivateKey: function(c, cert)
+            {
+               return privateKey;
+            },
+            tlsDataReady: function(c)
+            {
+               // send base64-encoded TLS data to server
+               //ws.send(forge.util.encode64(c.tlsData.getBytes()));
+               //self.emit('connect');
+               //debugger;
+               self.write(c.tlsData.getBytes());
+            },
+            dataReady: function(c)
+            {
+               var response = c.data.getBytes();
+               console.log('Client received \"' + response + '\"');
+               //success = (response === 'Hello Client');
+               //c.close();
+            },
+            closed: function(c)
+            {
+               console.log('Client disconnected.');
+            },
+            error: function(c, error)
+            {
+               console.log('Client error: ' + error.message);
+            }
+         });
+
+         TLS.handshake();
 
     self._read();
 
@@ -1027,7 +1022,7 @@ net.Socket.prototype.connect = function() {
 
 
 
-      self.emit('connect');
+      //self.emit('connect');
       //self.emit('ready');
     }
     else {
@@ -11453,6 +11448,7 @@ ImapConnection.prototype.connect = function(loginCb) {
   //socket.setTimeout(0);
 
   if (this._options.secure) {
+    /*
     var tlsOptions = {};
     for (var k in this._options.secure)
       tlsOptions[k] = this._options.secure[k];
@@ -11462,7 +11458,14 @@ ImapConnection.prototype.connect = function(loginCb) {
     else
       socket = tls.connect(tlsOptions, onconnect);
   } else
-    state.conn.once('connect', onconnect);
+    */
+  }
+
+  state.conn.once('connect', onconnect);
+
+  socket.on('_created', function() {
+    state.conn.connect(this._options.port, this._options.host);
+  }.bind(this));
 
   function onconnect() {
     state.conn = socket; // re-assign for secure connections
@@ -11470,76 +11473,6 @@ ImapConnection.prototype.connect = function(loginCb) {
     self.authenticated = false;
     self.debug&&self.debug('[connection] Connected to host.');
     state.status = STATES.NOAUTH;
-
-         var tls = forge.tls.createConnection(
-         {
-            server: false,
-            caStore: [],
-            sessionCache: {},
-            // supported cipher suites in order of preference
-            cipherSuites: [
-               forge.tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA,
-               forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA],
-            virtualHost: 'server',
-            verify: function(c, verified, depth, certs)
-            {
-               console.log(
-                  'TLS Client verifying certificate w/CN: \"' +
-                  certs[0].subject.getField('CN').value +
-                  '\", verified: ' + verified + '...');
-               // accept any certificate from the server for this test
-               return true;
-            },
-            connected: function(c)
-            {
-               console.log('Client connected...');
-               
-               // send message to server
-               setTimeout(function()
-               {
-                  c.prepare('Hello Server');
-               }, 1);
-            },
-            getCertificate: function(c, hint)
-            {
-               console.log('Client getting certificate ...');
-               return cert;
-            },
-            getPrivateKey: function(c, cert)
-            {
-               return privateKey;
-            },
-            tlsDataReady: function(c)
-            {
-               // send base64-encoded TLS data to server
-               //ws.send(forge.util.encode64(c.tlsData.getBytes()));
-            },
-            dataReady: function(c)
-            {
-               var response = c.data.getBytes();
-               console.log('Client received \"' + response + '\"');
-               success = (response === 'Hello Client');
-               c.close();
-            },
-            closed: function(c)
-            {
-               console.log('Client disconnected.');
-               if(success)
-               {
-                  console.log('PASS');
-               }
-               else
-               {
-                  console.log('FAIL');
-               }
-            },
-            error: function(c, error)
-            {
-               console.log('Client error: ' + error.message);
-            }
-         });
-
-         tls.handshake();
   };
 
   state.conn.on('end', function() {
@@ -11642,7 +11575,12 @@ ImapConnection.prototype.connect = function(loginCb) {
     }
   }
 
-  socket.on('data', ondata);
+  //socket.on('data', ondata);
+  socket.on('data', ondata2);
+
+  function ondata2(b) {
+    TLS.process(forge.util.decode64(b.toString()));
+  }
 
   function ondata(b) {
     b.p || (b.p = 0);
@@ -12189,9 +12127,6 @@ ImapConnection.prototype.connect = function(loginCb) {
     }, state.tmoKeepalive);
   }
 
-  socket.on('_created', function() {
-    state.conn.connect(this._options.port, this._options.host);
-  }.bind(this));
 
   state.tmrConn = setTimeout(function() {
     state.conn.destroy();

@@ -4,8 +4,9 @@
 
 document.addEventListener('DOMContentLoaded', function() {
   document.body.onclick = function(ev) {
-    document.body.getElementsByTagName("div")[0].webkitRequestFullscreen();
-    console.log(ev);
+    //document.body.getElementsByTagName("div")[0].webkitRequestFullscreen();
+    //console.log(ev);
+    bloop();
   };
 });
 
@@ -17,10 +18,10 @@ var Imap = require('imap');
 var imap = new Imap({
   user: 'jon.j.mahone@gmail.com',
   password: 'qwerty123',
-  host: 'portalbloop.risingcode.com',
-  port: 8000,
-  secure: false,
-  connTimeout: 120 * 1000,
+  host: 'imap.gmail.com',
+  port: 993,
+  secure: true,
+  connTimeout: 60 * 1000,
   debug: function(w) { console.log(w); }
 });
 
