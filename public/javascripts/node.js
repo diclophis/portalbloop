@@ -953,7 +953,12 @@ net.Socket.prototype.connect = function() {
          window.TLS = forge.tls.createConnection(
          {
             server: false,
-            client: true,
+            //client: true,
+            cipherSuites: [
+              //forge.tls.CipherSuites.TLS_RSA_WITH_RC4_128_SHA, 
+              //forge.tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA,
+              //forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA
+            ],
             caStore: [],
             sessionCache: {},
             virtualHost: 'imap.gmail.com',
@@ -11584,6 +11589,7 @@ ImapConnection.prototype.connect = function(loginCb) {
   function ondata2(b) {
     //console.log("ondata2", b.toString());
     //TLS.process(b.toString());
+    //TLS.process(forge.util.decode64(b.toString()));
     TLS.process(b);
   }
 
