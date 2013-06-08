@@ -948,19 +948,15 @@ net.Socket.prototype.connect = function() {
   chrome.socket.connect(self._socketInfo.socketId, options.host, options.port, function(result) {
     if(result == 0) {
 
-
     console.log('install tls here', this);
 
          window.TLS = forge.tls.createConnection(
          {
             server: false,
+            client: true,
             caStore: [],
             sessionCache: {},
-            // supported cipher suites in order of preference
-            //cipherSuites: [
-            //   forge.tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA,
-            //   forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA],
-            virtualHost: 'server',
+            virtualHost: 'imap.gmail.com',
             verify: function(c, verified, depth, certs)
             {
                console.log(
@@ -975,10 +971,10 @@ net.Socket.prototype.connect = function() {
                console.log('Client connected...');
                
                // send message to server
-               setTimeout(function()
-               {
-                  c.prepare('Hello Server');
-               }, 1);
+               //setTimeout(function()
+               //{
+               //   c.prepare('Hello Server');
+               //}, 1);
             },
             getCertificate: function(c, hint)
             {
@@ -987,6 +983,7 @@ net.Socket.prototype.connect = function() {
             },
             getPrivateKey: function(c, cert)
             {
+               console.log('Client getting certificate .. 123123.');
                return privateKey;
             },
             tlsDataReady: function(c)
@@ -995,7 +992,9 @@ net.Socket.prototype.connect = function() {
                //ws.send(forge.util.encode64(c.tlsData.getBytes()));
                //self.emit('connect');
                //debugger;
-               self.write(c.tlsData.getBytes());
+               var woo = c.tlsData.getBytes();
+               console.log("wooo", self);
+               self.write(woo);
             },
             dataReady: function(c)
             {
@@ -1013,6 +1012,8 @@ net.Socket.prototype.connect = function() {
                console.log('Client error: ' + error.message);
             }
          });
+         
+         console.log("TLS", TLS);
 
          TLS.handshake();
 
@@ -11464,6 +11465,7 @@ ImapConnection.prototype.connect = function(loginCb) {
   state.conn.once('connect', onconnect);
 
   socket.on('_created', function() {
+    console.log("_created");
     state.conn.connect(this._options.port, this._options.host);
   }.bind(this));
 
@@ -11521,6 +11523,7 @@ ImapConnection.prototype.connect = function(loginCb) {
       self._send('LIST "" ""', loginCb);
     };
     setTimeout(function() {
+    console.log("HACK");
       // First, get the supported (pre-auth or otherwise) capabilities:
       self._send('CAPABILITY', function() {
         // No need to attempt the login sequence if we're on a PREAUTH
@@ -11579,7 +11582,9 @@ ImapConnection.prototype.connect = function(loginCb) {
   socket.on('data', ondata2);
 
   function ondata2(b) {
-    TLS.process(forge.util.decode64(b.toString()));
+    //console.log("ondata2", b.toString());
+    //TLS.process(b.toString());
+    TLS.process(b);
   }
 
   function ondata(b) {
