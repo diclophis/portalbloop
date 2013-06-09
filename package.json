@@ -14,7 +14,7 @@
   "dependencies": {
     "imap": "git://github.com/diclophis/node-imap.git",
     "forge": "git://github.com/digitalbazaar/forge.git",
-    "net-chromify": "git://github.com/iceddev/net-chromify.git"
+    "net-chromify": "git://github.com/diclophis/net-chromify.git"
   },
   "author": {
     "name": "xxx",
