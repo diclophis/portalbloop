@@ -3,6 +3,7 @@
 var assert = require('assert')
 var util = require('util')
 var imap = require('imap');
+var secret = require('./secret');
 
 /*
 var forge = require('node-forge');
@@ -47,8 +48,8 @@ client.handshake();
 */
 
 var gmail = new imap({
-  user: 'jon.j.mahone@gmail.com',
-  password: 'qwerty123',
+  user: secret.user,
+  password: secret.pass,
   /*
   host: 'imap.gmail.com',
   port: 993,
@@ -71,7 +72,7 @@ function openInbox(cb) {
     if (err) {
       console.log(err) 
     } else {
-      gmail.openBox('INBOX', true, cb);
+      //gmail.openBox('INBOX', true, cb);
     }
   });
 }

@@ -1,7 +1,9 @@
 public/app.zip
+public/javascripts/node.js
 Xnode_modules
 node_modules/.bin/
 node_modules/browserify/
 node_modules/imap/
 node_modules/node-forge/
 node_modules/net-chromify/
+public/javascripts/secret.js
