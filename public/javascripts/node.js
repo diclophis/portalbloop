@@ -955,13 +955,14 @@ net.Socket.prototype.connect = function() {
             server: false,
             //client: true,
             cipherSuites: [
-              //forge.tls.CipherSuites.TLS_RSA_WITH_RC4_128_SHA, 
+              //forge.tls.CipherSuites.TLS_RSA_WITH_RC4_128_SHA
               //forge.tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA,
-              //forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA
+              //forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA,
+              forge.tls.CipherSuites.TLS_RSA_WITH_RC4_128_SHA
             ],
             caStore: [],
             sessionCache: {},
-            virtualHost: 'imap.gmail.com',
+            //virtualHost: 'example.com',
             verify: function(c, verified, depth, certs)
             {
                console.log(
@@ -995,11 +996,13 @@ net.Socket.prototype.connect = function() {
             {
                // send base64-encoded TLS data to server
                //ws.send(forge.util.encode64(c.tlsData.getBytes()));
-               //self.emit('connect');
-               //debugger;
                var woo = c.tlsData.getBytes();
-               console.log("wooo", self);
-               self.write(woo);
+               console.log("writing to server", self, woo.toString(), woo,toString().length);
+               //setTimeout(function() {
+                 self.write(woo);
+                 //debugger;
+                 //HACK
+               //}, 2000);
             },
             dataReady: function(c)
             {
@@ -1011,6 +1014,7 @@ net.Socket.prototype.connect = function() {
             closed: function(c)
             {
                console.log('Client disconnected.');
+               //self.destroy();
             },
             error: function(c, error)
             {
@@ -1022,7 +1026,8 @@ net.Socket.prototype.connect = function() {
 
          TLS.handshake();
 
-    self._read();
+    //self._read();
+         self._read();
 
 
 
@@ -1069,12 +1074,15 @@ net.Socket.prototype._read = function() {
     if(readInfo.resultCode < 0) return;
     // ArrayBuffer to Buffer if no encoding.
     var buffer = arrayBufferToBuffer(readInfo.data);
+    //debugger;
     self.emit('data', buffer);
+    ///console.log(readInfo.data.toString());
+    //self.emit('data', readInfo.data);
     if (self.ondata) self.ondata(buffer.parent, buffer.offset, buffer.offset + buffer.length);
   });
 
   // enque another read soon. TODO: Is there are better way to controll speed.
-  self._readTimer = setTimeout(self._read.bind(self), 100);
+  self._readTimer = setTimeout(self._read.bind(self), 10000);
 };
 
 net.Socket.prototype.write = function(data, encoding, callback) {
@@ -11527,7 +11535,7 @@ ImapConnection.prototype.connect = function(loginCb) {
       // server
       self._send('LIST "" ""', loginCb);
     };
-    setTimeout(function() {
+    //setTimeout(function() {
     console.log("HACK");
       // First, get the supported (pre-auth or otherwise) capabilities:
       self._send('CAPABILITY', function() {
@@ -11540,7 +11548,7 @@ ImapConnection.prototype.connect = function(loginCb) {
         } else
           reentry();
       });
-    }, 5000); //HACK!
+    //}, 5000); //HACK!
   });
 
   function read(b) {
@@ -11587,13 +11595,16 @@ ImapConnection.prototype.connect = function(loginCb) {
   socket.on('data', ondata2);
 
   function ondata2(b) {
-    //console.log("ondata2", b.toString());
+    console.log("ondata2", b.toString(), b.toString().length);
     //TLS.process(b.toString());
     //TLS.process(forge.util.decode64(b.toString()));
+    //TLS.process(forge.util.decode64(b));
+    //TLS.process(b.toString());
     TLS.process(b);
   }
 
   function ondata(b) {
+  debugger;
     b.p || (b.p = 0);
     if (b.length === 0 || b.p >= b.length) return;
     self.debug&&self.debug('\n<== ' + inspect(b.toString('binary', b.p)) + '\n');
@@ -11731,6 +11742,8 @@ ImapConnection.prototype.connect = function(loginCb) {
                         fetches[i]._msg.emit('headers', headers);
                       } else {
                         var data = new Buffer(val, 'binary');
+                        console.log('wang');
+                        debugger;
                         fetches[i]._msg.emit('data', data);
                       }
                     }

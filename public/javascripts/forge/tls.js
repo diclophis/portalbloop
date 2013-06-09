@@ -440,182 +440,6 @@ var inflate = function(c, record, s) {
 };
 
 /**
- * Encrypts the TLSCompressed record into a TLSCipherText record using AES-128
- * in CBC mode.
- *
- * @param record the TLSCompressed record to encrypt.
- * @param s the ConnectionState to use.
- *
- * @return true on success, false on failure.
- */
-var encrypt_aes_128_cbc_sha1 = function(record, s) {
-  var rval = false;
-
-  // append MAC to fragment, update sequence number
-  var mac = s.macFunction(s.macKey, s.sequenceNumber, record);
-  record.fragment.putBytes(mac);
-  s.updateSequenceNumber();
-
-  // TODO: TLS 1.1 & 1.2 use an explicit IV every time to protect against
-  // CBC attacks
-  // var iv = forge.random.getBytes(16);
-
-  // use the pre-generated IV when initializing for TLS 1.0, otherwise use the
-  // residue from the previous encryption
-  var iv = s.cipherState.init ? null : s.cipherState.iv;
-  s.cipherState.init = true;
-
-  // start cipher
-  var cipher = s.cipherState.cipher;
-  cipher.start(iv);
-
-  // TODO: TLS 1.1 & 1.2 write IV into output
-  //cipher.output.putBytes(iv);
-
-  // do encryption (default padding is appropriate)
-  cipher.update(record.fragment);
-  if(cipher.finish(encrypt_aes_128_cbc_sha1_padding)) {
-    // set record fragment to encrypted output
-    record.fragment = cipher.output;
-    record.length = record.fragment.length();
-    rval = true;
-  }
-
-  return rval;
-};
-
-/**
- * Handles padding for aes_128_cbc_sha1 in encrypt mode.
- *
- * @param blockSize the block size.
- * @param input the input buffer.
- * @param decrypt true in decrypt mode, false in encrypt mode.
- *
- * @return true on success, false on failure.
- */
-var encrypt_aes_128_cbc_sha1_padding = function(blockSize, input, decrypt) {
-  /* The encrypted data length (TLSCiphertext.length) is one more than the sum
-   of SecurityParameters.block_length, TLSCompressed.length,
-   SecurityParameters.mac_length, and padding_length.
-
-   The padding may be any length up to 255 bytes long, as long as it results in
-   the TLSCiphertext.length being an integral multiple of the block length.
-   Lengths longer than necessary might be desirable to frustrate attacks on a
-   protocol based on analysis of the lengths of exchanged messages. Each uint8
-   in the padding data vector must be filled with the padding length value.
-
-   The padding length should be such that the total size of the
-   GenericBlockCipher structure is a multiple of the cipher's block length.
-   Legal values range from zero to 255, inclusive. This length specifies the
-   length of the padding field exclusive of the padding_length field itself.
-
-   This is slightly different from PKCS#7 because the padding value is 1
-   less than the actual number of padding bytes if you include the
-   padding_length uint8 itself as a padding byte. */
-  if(!decrypt) {
-    // get the number of padding bytes required to reach the blockSize and
-    // subtract 1 to make room for the padding_length uint8 but add it during
-    // fillWithByte
-    var padding = (input.length() == blockSize) ?
-      (blockSize - 1) : (blockSize - input.length() - 1);
-    input.fillWithByte(padding, padding + 1);
-  }
-  return true;
-};
-
-/**
- * Handles padding for aes_128_cbc_sha1 in decrypt mode.
- *
- * @param blockSize the block size.
- * @param output the output buffer.
- * @param decrypt true in decrypt mode, false in encrypt mode.
- *
- * @return true on success, false on failure.
- */
-var decrypt_aes_128_cbc_sha1_padding = function(blockSize, output, decrypt) {
-  var rval = true;
-  if(decrypt) {
-    /* The last byte in the output specifies the number of padding bytes not
-      including itself. Each of the padding bytes has the same value as that
-      last byte (known as the padding_length). Here we check all padding
-      bytes to ensure they have the value of padding_length even if one of
-      them is bad in order to ward-off timing attacks. */
-    var len = output.length();
-    var paddingLength = output.last();
-    for(var i = len - 1 - paddingLength; i < len - 1; ++i) {
-      rval = rval && (output.at(i) == paddingLength);
-    }
-    if(rval) {
-      // trim off padding bytes and last padding length byte
-      output.truncate(paddingLength + 1);
-    }
-  }
-  return rval;
-};
-
-/**
- * Decrypts a TLSCipherText record into a TLSCompressed record using
- * AES-128 in CBC mode.
- *
- * @param record the TLSCipherText record to decrypt.
- * @param s the ConnectionState to use.
- *
- * @return true on success, false on failure.
- */
-var decrypt_aes_128_cbc_sha1 = function(record, s) {
-  var rval = false;
-
-  // TODO: TLS 1.1 & 1.2 use an explicit IV every time to protect against
-  // CBC attacks
-  //var iv = record.fragment.getBytes(16);
-
-  // use pre-generated IV when initializing for TLS 1.0, otherwise use the
-  // residue from the previous decryption
-  var iv = s.cipherState.init ? null : s.cipherState.iv;
-  s.cipherState.init = true;
-
-  // start cipher
-  var cipher = s.cipherState.cipher;
-  cipher.start(iv);
-
-  // do decryption
-  cipher.update(record.fragment);
-  rval = cipher.finish(decrypt_aes_128_cbc_sha1_padding);
-
-  // even if decryption fails, keep going to minimize timing attacks
-
-  // decrypted data:
-  // first (len - 20) bytes = application data
-  // last 20 bytes          = MAC
-  var macLen = s.macLength;
-
-  // create a zero'd out mac
-  var mac = '';
-  for(var i = 0; i < macLen; ++i) {
-    mac += String.fromCharCode(0);
-  }
-
-  // get fragment and mac
-  var len = cipher.output.length();
-  if(len >= macLen) {
-    record.fragment = cipher.output.getBytes(len - macLen);
-    mac = cipher.output.getBytes(macLen);
-  }
-  // bad data, but get bytes anyway to try to keep timing consistent
-  else {
-    record.fragment = cipher.output.getBytes();
-  }
-  record.fragment = forge.util.createBuffer(record.fragment);
-  record.length = record.fragment.length();
-
-  // see if data integrity checks out, update sequence number
-  var mac2 = s.macFunction(s.macKey, s.sequenceNumber, record);
-  s.updateSequenceNumber();
-  rval = (mac2 === mac) && rval;
-  return rval;
-};
-
-/**
  * Reads a TLS variable-length vector from a byte buffer.
  *
  * Variable-length vectors are defined by specifying a subrange of legal
@@ -647,6 +471,8 @@ var readVector = function(b, lenBytes) {
     len = b.getInt32();
     break;
   }
+
+  console.log("readVector len", len);
 
   // read vector bytes into a new buffer
   return forge.util.createBuffer(b.getBytes(len));
@@ -857,16 +683,11 @@ tls.Alert.Description = {
 
 /**
  * Supported cipher suites.
- *
- * TODO: Make cipher suites modular.
  */
-tls.CipherSuites = {
-  TLS_RSA_WITH_AES_128_CBC_SHA: [0x00,0x2f],
-  TLS_RSA_WITH_AES_256_CBC_SHA: [0x00,0x35]
-};
+tls.CipherSuites = {};
 
 /**
- * Gets a supported cipher suite from 2 bytes.
+ * Gets a supported cipher suite from its 2 byte ID.
  *
  * @param twoBytes two bytes in a string.
  *
@@ -874,10 +695,12 @@ tls.CipherSuites = {
  */
 tls.getCipherSuite = function(twoBytes) {
   var rval = null;
+  console.log(twoBytes.charCodeAt(0), twoBytes.charCodeAt(1));
   for(var key in tls.CipherSuites) {
     var cs = tls.CipherSuites[key];
-    if(cs[0] === twoBytes.charCodeAt(0) &&
-      cs[1] === twoBytes.charCodeAt(1)) {
+    console.log(cs.id[0], cs.id[1]);
+    if(cs.id[0] === twoBytes.charCodeAt(0) &&
+      cs.id[1] === twoBytes.charCodeAt(1)) {
       rval = cs;
       break;
     }
@@ -963,8 +786,9 @@ tls.parseHelloMessage = function(c, record, length) {
         major: b.getByte(),
         minor: b.getByte()
       },
+      session_id_length: b.getByte(),
       random: forge.util.createBuffer(b.getBytes(32)),
-      session_id: readVector(b, 1),
+      session_id: forge.util.createBuffer(b.getBytes(32)), //readVector(b, 1),
       extensions: []
     };
     if(client) {
@@ -1020,7 +844,7 @@ tls.parseHelloMessage = function(c, record, length) {
     if(msg.version.major !== tls.Version.major ||
       msg.version.minor !== tls.Version.minor) {
       c.error(c, {
-        message: 'Incompatible TLS version. version major mismatch',
+        message: 'Incompatible TLS version.',
         send: true,
         alert: {
           level: tls.Alert.Level.fatal,
@@ -1033,6 +857,7 @@ tls.parseHelloMessage = function(c, record, length) {
     if(client) {
       // FIXME: should be checking configured acceptable cipher suites
       c.session.cipherSuite = tls.getCipherSuite(msg.cipher_suite);
+      //c.session.cipherSuite = forge.tls.CipherSuites.TLS_RSA_WITH_RC4_128_SHA;
     }
     // get a supported preferred (ClientHello) cipher suite
     else {
@@ -1087,18 +912,6 @@ tls.createSecurityParameters = function(c, msg) {
 
   // TODO: handle other options from server when more supported
 
-  // only AES CBC is presently supported, so just change the key length based
-  // on the chosen cipher suite
-  var keyLength;
-  switch(c.session.cipherSuite) {
-  case tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA:
-    keyLength = 16;
-    break;
-  case tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA:
-    keyLength = 32;
-    break;
-  }
-
   // get client and server randoms
   var client = (c.entity === tls.ConnectionEnd.client);
   var msgRandom = msg.random.bytes();
@@ -1109,12 +922,13 @@ tls.createSecurityParameters = function(c, msg) {
   c.session.sp = {
     entity: c.entity,
     prf_algorithm: tls.PRFAlgorithm.tls_prf_sha256,
-    bulk_cipher_algorithm: tls.BulkCipherAlgorithm.aes,
-    cipher_type: tls.CipherType.block,
-    enc_key_length: keyLength,
-    block_length: 16,
-    fixed_iv_length: 16,
-    record_iv_length: 16,
+    bulk_cipher_algorithm: null,
+    cipher_type: null,
+    enc_key_length: null,
+    block_length: null,
+    fixed_iv_length: null,
+    record_iv_length: null,
+    // TODO: also get MAC params from cipher suite
     mac_algorithm: tls.MACAlgorithm.hmac_sha1,
     mac_length: 20,
     mac_key_length: 20,
@@ -2476,7 +2290,7 @@ hsTable[tls.ConnectionEnd.server] = [
  */
 tls.generateKeys = function(c, sp) {
   // TLS_RSA_WITH_AES_128_CBC_SHA (required to be compliant with TLS 1.2) &
-  // TLS_RSA_WITH_AES_128_CBC_SHA are the only cipher suites implemented
+  // TLS_RSA_WITH_AES_256_CBC_SHA are the only cipher suites implemented
   // at present
 
   // TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA is required to be compliant with
@@ -2676,8 +2490,10 @@ tls.createConnectionState = function(c) {
 
   // handle security parameters
   if(c.session) {
-    // generate keys
     var sp = c.session.sp;
+    c.session.cipherSuite.initSecurityParameters(sp);
+
+    // generate keys
     sp.keys = tls.generateKeys(c, sp);
 
     // mac setup
@@ -2685,6 +2501,8 @@ tls.createConnectionState = function(c) {
       sp.keys.server_write_MAC_key : sp.keys.client_write_MAC_key;
     state.write.macKey = client ?
       sp.keys.client_write_MAC_key : sp.keys.server_write_MAC_key;
+    // TODO: move to cipher suite module, expose hmac functions from
+    // TLS for external use by cipher suites
     state.read.macLength = state.write.macLength = sp.mac_length;
     switch(sp.mac_algorithm) {
     case tls.MACAlgorithm.hmac_sha1:
@@ -2697,36 +2515,7 @@ tls.createConnectionState = function(c) {
     }
 
     // cipher setup
-    switch(sp.bulk_cipher_algorithm) {
-    case tls.BulkCipherAlgorithm.aes:
-      state.read.cipherState = {
-        init: false,
-        cipher: forge.aes.createDecryptionCipher(client ?
-          sp.keys.server_write_key : sp.keys.client_write_key),
-        iv: client ? sp.keys.server_write_IV : sp.keys.client_write_IV
-      };
-      state.write.cipherState = {
-        init: false,
-        cipher: forge.aes.createEncryptionCipher(client ?
-          sp.keys.client_write_key : sp.keys.server_write_key),
-        iv: client ? sp.keys.client_write_IV : sp.keys.server_write_IV
-      };
-      state.read.cipherFunction = decrypt_aes_128_cbc_sha1;
-      state.write.cipherFunction = encrypt_aes_128_cbc_sha1;
-      break;
-    default:
-      throw {
-        message: 'Unsupported cipher algorithm.'
-      };
-    }
-    switch(sp.cipher_type) {
-    case tls.CipherType.block:
-      break;
-    default:
-      throw {
-        message: 'Unsupported cipher type.'
-      };
-    }
+    c.session.cipherSuite.initConnectionState(state, c, sp);
 
     // compression setup
     switch(sp.compression_algorithm) {
@@ -2889,8 +2678,8 @@ tls.createClientHello = function(c) {
   var cipherSuites = forge.util.createBuffer();
   for(var i = 0; i < c.cipherSuites.length; ++i) {
     var cs = c.cipherSuites[i];
-    cipherSuites.putByte(cs[0]);
-    cipherSuites.putByte(cs[1]);
+    cipherSuites.putByte(cs.id[0]);
+    cipherSuites.putByte(cs.id[1]);
   }
   var cSuites = cipherSuites.length();
 
@@ -3007,8 +2796,8 @@ tls.createServerHello = function(c) {
   rval.putByte(tls.Version.minor);           // minor version
   rval.putBytes(c.session.sp.server_random); // random time + bytes
   writeVector(rval, 1, forge.util.createBuffer(sessionId));
-  rval.putByte(c.session.cipherSuite[0]);
-  rval.putByte(c.session.cipherSuite[1]);
+  rval.putByte(c.session.cipherSuite.id[0]);
+  rval.putByte(c.session.cipherSuite.id[1]);
   rval.putByte(c.session.compressionMethod);
   return rval;
 };
@@ -3788,8 +3577,9 @@ tls.createConnection = function(options) {
   var cipherSuites = options.cipherSuites || null;
   if(cipherSuites === null) {
     cipherSuites = [];
-    cipherSuites.push(tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA);
-    cipherSuites.push(tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA);
+    for(var key in tls.CipherSuites) {
+      cipherSuites.push(tls.CipherSuites[key]);
+    }
   }
 
   // set default entity
@@ -3937,7 +3727,7 @@ tls.createConnection = function(options) {
       if(c.record.version.major != tls.Version.major ||
         c.record.version.minor != tls.Version.minor) {
         c.error(c, {
-          message: 'Incompatible TLS version. c record version mismatch',
+          message: 'Incompatible TLS version.',
           send: true,
           alert: {
             level: tls.Alert.Level.fatal,
@@ -4198,14 +3988,15 @@ tls.createConnection = function(options) {
 /* TLS API */
 forge.tls = forge.tls || {};
 
+// expose non-functions
+for(var key in tls) {
+  if(typeof tls[key] !== 'function') {
+    forge.tls[key] = tls[key];
+  }
+}
+
 // expose prf_tls1 for testing
 forge.tls.prf_tls1 = prf_TLS1;
-
-// expose TLS alerts
-forge.tls.Alert = tls.Alert;
-
-// expose cipher suites
-forge.tls.CipherSuites = tls.CipherSuites;
 
 // expose session cache creation
 forge.tls.createSessionCache = tls.createSessionCache;
@@ -4314,7 +4105,6 @@ forge.tls.createConnection = tls.createConnection;
 /* ########## Begin module wrapper ########## */
 var name = 'tls';
 var deps = [
-  './aes',
   './asn1',
   './hmac',
   './md',
