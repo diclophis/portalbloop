@@ -2,10 +2,10 @@
   "name": "wang-chung",
   "version": "0.0.1",
   "description": "Node in your Chrome",
-  "main": "test-client.js",
+  "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "http://github.com/iceddev/node-chromify.wtf"
+    "url": "http://github.com/iceddev/node-chromify.git"
   },
   "keywords": [
     "node",
@@ -13,7 +13,6 @@
   ],
   "dependencies": {
     "imap": "git://github.com/mscdex/node-imap.git",
-    "forge": "git://github.com/digitalbazaar/forge.git",
     "net-chromify": "git://github.com/iceddev/net-chromify.git"
   },
   "author": {
@@ -24,8 +23,5 @@
   "license": "Apache2",
   "engine": {
     "node": ">=0.8.0"
-  },
-  "scripts": {
-    "test-client": "node test-client.js"
   }
 }
