@@ -12,7 +12,7 @@
     "browser"
   ],
   "dependencies": {
-    "imap": "git://github.com/mscdex/node-imap.git",
+    "imap": "git://github.com/diclophis/node-imap.git",
     "forge": "git://github.com/digitalbazaar/forge.git",
     "net-chromify": "git://github.com/iceddev/net-chromify.git"
   },
