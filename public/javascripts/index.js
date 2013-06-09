@@ -67,16 +67,26 @@ gmail.on('mail', function(mail) {
 
 function openInbox(cb) {
   gmail.connect(function(err) {
-    if (err) die(err);
-    gmail.openBox('INBOX', true, cb);
+    console.log("authenticated!");
+    if (err) {
+      console.log(err) 
+    } else {
+      gmail.openBox('INBOX', true, cb);
+    }
   });
 }
 
 if (true) {
   openInbox(function(err, mailbox) {
-    if (err) die(err);
+    if (err) {
+      console.log(err);
+      return;
+    }
     gmail.search([ 'UNSEEN', ['SINCE', 'May 20, 2010'] ], function(err, results) {
-      if (err) die(err);
+      if (err) {
+        console.log(err);
+        return;
+      }
       gmail.fetch(results,
         { headers: ['from', 'to', 'subject', 'date'],
           cb: function(fetch) {

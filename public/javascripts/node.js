@@ -1,6 +1,6 @@
 require=(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0].call(u.exports,function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({"util":[function(require,module,exports){
-module.exports=require('+c0iQh');
-},{}],"+c0iQh":[function(require,module,exports){
+module.exports=require('DDZ1I6');
+},{}],"DDZ1I6":[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
@@ -354,8 +354,8 @@ exports.format = function(f) {
 };
 
 },{"events":1}],"assert":[function(require,module,exports){
-module.exports=require('P++JCd');
-},{}],"P++JCd":[function(require,module,exports){
+module.exports=require('vYBjZZ');
+},{}],"vYBjZZ":[function(require,module,exports){
 (function(){// UTILITY
 var util = require('util');
 var Buffer = require("buffer").Buffer;
@@ -672,12 +672,133 @@ assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
 assert.ifError = function(err) { if (err) {throw err;}};
 
 })()
-},{"util":"+c0iQh","buffer":2}],3:[function(require,module,exports){
-(function(){// bloop
+},{"util":"DDZ1I6","buffer":2}],3:[function(require,module,exports){
+(function(){//
+
+var assert = require('assert')
+var util = require('util')
+var imap = require('imap');
+
+/*
+var forge = require('node-forge');
+var client = forge.tls.createConnection({
+  server: false,
+  caStore: [],
+  sessionCache: {},
+  // supported cipher suites in order of preference
+  cipherSuites: [
+    forge.tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA,
+    forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA],
+  virtualHost: 'imap.gmail.com',
+  verify: function(connection, verified, depth, certs) {
+    return true;
+  },
+  connected: function(connection) {
+    console.log('connected');
+    // send message to server
+    //connection.prepare('Hi server!');
+  },
+  tlsDataReady: function(connection) {
+    // TLS data (encrypted) is ready to be sent to the server
+    // console.log("tlsDataReady", connection.tlsData.getBytes());
+    // if you were communicating with the server below, you'd do:
+    // server.process(connection.tlsData.getBytes());
+  },
+  dataReady: function(connection) {
+    // clear data from the server is ready
+    console.log('the server sent: ' + connection.data.getBytes());
+    // close connection
+    connection.close();
+  },
+  closed: function(connection) {
+    console.log('disconnected');
+  },
+  error: function(connection, error) {
+    console.log('uh oh', error);
+  }
+});
+// start the handshake process
+client.handshake();
+*/
+
+var gmail = new imap({
+  user: 'jon.j.mahone@gmail.com',
+  password: 'qwerty123',
+  /*
+  host: 'imap.gmail.com',
+  port: 993,
+  secure: false,
+  */
+  host: 'portalbloop.risingcode.com',
+  port: 8000,
+  secure: false,
+  connTimeout: 60 * 1000,
+  debug: function(w) { console.log(w); }
+});
+
+gmail.on('mail', function(mail) {
+  console.log(mail);
+});
+
+function openInbox(cb) {
+  gmail.connect(function(err) {
+    console.log("authenticated!");
+    if (err) {
+      console.log(err) 
+    } else {
+      gmail.openBox('INBOX', true, cb);
+    }
+  });
+}
+
+if (true) {
+  openInbox(function(err, mailbox) {
+    debugger;
+    if (err) {
+      console.log(err);
+      return;
+    }
+    gmail.search([ 'UNSEEN', ['SINCE', 'May 20, 2010'] ], function(err, results) {
+      if (err) {
+        console.log(err);
+        return;
+      }
+      gmail.fetch(results,
+        { headers: ['from', 'to', 'subject', 'date'],
+          cb: function(fetch) {
+            fetch.on('message', function(msg) {
+              console.log('Saw message no. ' + msg.seqno);
+              msg.on('headers', function(hdrs) {
+                console.log('Headers for no. ' + msg.seqno + ': ' + console.log(hdrs));
+              });
+              msg.on('end', function() {
+                console.log('Finished message no. ' + msg.seqno);
+              });
+            });
+          }
+        }, function(err) {
+          if (err) throw err;
+          console.log('Done fetching all messages!');
+          //imap.logout();
+        }
+      );
+    });
+  });
+}
+
+if (typeof(chrome) == "undefined") {
+  var http = require('http');
+  http.createServer(function (req, res) {
+    res.writeHead(200, {'Content-Type': 'text/plain'});
+    res.end('');
+  }).listen(8124, "127.0.0.1");
+  console.log('ctrl-c to stop');
+}
+
 })()
-},{"assert":"P++JCd","util":"+c0iQh","imap":"qIWmyf"}],"net":[function(require,module,exports){
-module.exports=require('8b6xEy');
-},{}],"8b6xEy":[function(require,module,exports){
+},{"assert":"vYBjZZ","util":"DDZ1I6","imap":"/esTPA","http":4}],"net":[function(require,module,exports){
+module.exports=require('6y6stt');
+},{}],"6y6stt":[function(require,module,exports){
 (function(){/*
    Copyright 2012 Google Inc
 
@@ -893,12 +1014,13 @@ net.Socket = function(options) {
   this._socketInfo = 0;
   this._encoding;
 
+
   if(createNew){
     chrome.socket.create("tcp", {}, function(createInfo) {
       self._socketInfo = createInfo;
       self.emit("_created"); // This event doesn't exist in the API, it is here because Chrome is async
       // start trying to read
-      // self._read();
+      self._read();
     });
   }
 };
@@ -945,96 +1067,11 @@ net.Socket.prototype.connect = function() {
   var cb = args[args.length -1];
   cb = (typeof cb === 'function') ? cb : function() {};
   self.on('connect', cb);
+
   chrome.socket.connect(self._socketInfo.socketId, options.host, options.port, function(result) {
     if(result == 0) {
-
-    console.log('install tls here', this);
-
-         window.TLS = forge.tls.createConnection(
-         {
-            server: false,
-            //client: true,
-            cipherSuites: [
-              //forge.tls.CipherSuites.TLS_RSA_WITH_RC4_128_SHA
-              //forge.tls.CipherSuites.TLS_RSA_WITH_AES_128_CBC_SHA,
-              //forge.tls.CipherSuites.TLS_RSA_WITH_AES_256_CBC_SHA,
-              forge.tls.CipherSuites.TLS_RSA_WITH_RC4_128_SHA
-            ],
-            caStore: [],
-            sessionCache: {},
-            //virtualHost: 'example.com',
-            verify: function(c, verified, depth, certs)
-            {
-               console.log(
-                  'TLS Client verifying certificate w/CN: \"' +
-                  certs[0].subject.getField('CN').value +
-                  '\", verified: ' + verified + '...');
-               // accept any certificate from the server for this test
-               return true;
-            },
-            connected: function(c)
-            {
-               console.log('Client connected...');
-               
-               // send message to server
-               //setTimeout(function()
-               //{
-               //   c.prepare('Hello Server');
-               //}, 1);
-            },
-            getCertificate: function(c, hint)
-            {
-               console.log('Client getting certificate ...');
-               return cert;
-            },
-            getPrivateKey: function(c, cert)
-            {
-               console.log('Client getting certificate .. 123123.');
-               return privateKey;
-            },
-            tlsDataReady: function(c)
-            {
-               // send base64-encoded TLS data to server
-               //ws.send(forge.util.encode64(c.tlsData.getBytes()));
-               var woo = c.tlsData.getBytes();
-               console.log("writing to server", self, woo.toString(), woo,toString().length);
-               //setTimeout(function() {
-                 self.write(woo);
-                 //debugger;
-                 //HACK
-               //}, 2000);
-            },
-            dataReady: function(c)
-            {
-               var response = c.data.getBytes();
-               console.log('Client received \"' + response + '\"');
-               //success = (response === 'Hello Client');
-               //c.close();
-            },
-            closed: function(c)
-            {
-               console.log('Client disconnected.');
-               //self.destroy();
-            },
-            error: function(c, error)
-            {
-               console.log('Client error: ' + error.message);
-            }
-         });
-         
-         console.log("TLS", TLS);
-
-         TLS.handshake();
-
-    //self._read();
-         self._read();
-
-
-
-
-
-      //self.emit('connect');
-      //self.emit('ready');
+      self._read();
+      self.emit('connect');
     }
     else {
       self.emit('error', new Error("Unable to connect"));
@@ -1074,15 +1111,12 @@ net.Socket.prototype._read = function() {
     if(readInfo.resultCode < 0) return;
     // ArrayBuffer to Buffer if no encoding.
     var buffer = arrayBufferToBuffer(readInfo.data);
-    //debugger;
     self.emit('data', buffer);
-    ///console.log(readInfo.data.toString());
-    //self.emit('data', readInfo.data);
     if (self.ondata) self.ondata(buffer.parent, buffer.offset, buffer.offset + buffer.length);
   });
 
   // enque another read soon. TODO: Is there are better way to controll speed.
-  self._readTimer = setTimeout(self._read.bind(self), 10000);
+  self._readTimer = setTimeout(self._read.bind(self), 100);
 };
 
 net.Socket.prototype.write = function(data, encoding, callback) {
@@ -1140,7 +1174,7 @@ Object.defineProperty(net.Socket.prototype, 'bufferSize', {
 });
 
 })()
-},{"events":1,"util":"+c0iQh","stream":4,"buffer":2}],5:[function(require,module,exports){
+},{"events":1,"util":"DDZ1I6","stream":5,"buffer":2}],6:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1380,7 +1414,7 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":5}],4:[function(require,module,exports){
+},{"__browserify_process":6}],5:[function(require,module,exports){
 var events = require('events');
 var util = require('util');
 
@@ -1501,10 +1535,72 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":1,"util":"+c0iQh"}],6:[function(require,module,exports){
+},{"events":1,"util":"DDZ1I6"}],7:[function(require,module,exports){
 // todo
 
-},{}],7:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
+var http = module.exports;
+var EventEmitter = require('events').EventEmitter;
+var Request = require('./lib/request');
+
+http.request = function (params, cb) {
+    if (!params) params = {};
+    if (!params.host) params.host = window.location.host.split(':')[0];
+    if (!params.port) params.port = window.location.port;
+    if (!params.scheme) params.scheme = window.location.protocol.split(':')[0];
+    
+    var req = new Request(new xhrHttp, params);
+    if (cb) req.on('response', cb);
+    return req;
+};
+
+http.get = function (params, cb) {
+    params.method = 'GET';
+    var req = http.request(params, cb);
+    req.end();
+    return req;
+};
+
+http.Agent = function () {};
+http.Agent.defaultMaxSockets = 4;
+
+var xhrHttp = (function () {
+    if (typeof window === 'undefined') {
+        throw new Error('no window object present');
+    }
+    else if (window.XMLHttpRequest) {
+        return window.XMLHttpRequest;
+    }
+    else if (window.ActiveXObject) {
+        var axs = [
+            'Msxml2.XMLHTTP.6.0',
+            'Msxml2.XMLHTTP.3.0',
+            'Microsoft.XMLHTTP'
+        ];
+        for (var i = 0; i < axs.length; i++) {
+            try {
+                var ax = new(window.ActiveXObject)(axs[i]);
+                return function () {
+                    if (ax) {
+                        var ax_ = ax;
+                        ax = null;
+                        return ax_;
+                    }
+                    else {
+                        return new(window.ActiveXObject)(axs[i]);
+                    }
+                };
+            }
+            catch (e) {}
+        }
+        throw new Error('ajax not supported in this browser')
+    }
+    else {
+        throw new Error('ajax not supported in this browser');
+    }
+})();
+
+},{"events":1,"./lib/request":8}],9:[function(require,module,exports){
 (function(){/*!
  * XRegExp All 3.0.0-pre
  * <http://xregexp.com/>
@@ -5461,7 +5557,7 @@ return XRegExp;
 
 
 })()
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 exports.MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
                   'Oct', 'Nov', 'Dec'];
 
@@ -5705,7 +5801,7 @@ function line(b, s) {
 
 exports.line = line;
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -7111,7 +7207,7 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":"P++JCd","./buffer_ieee754":9,"base64-js":10}],11:[function(require,module,exports){
+},{"assert":"vYBjZZ","./buffer_ieee754":11,"base64-js":12}],13:[function(require,module,exports){
 var utils = require('./imap.utilities');
 
 var RE_CRLF = /\r\n/g,
@@ -7461,9 +7557,9 @@ exports.parseExpr = function(o, literals, result, start, useBrackets) {
   return (isTop ? result : start);
 };
 
-},{"./imap.utilities":8}],"imap":[function(require,module,exports){
-module.exports=require('qIWmyf');
-},{}],12:[function(require,module,exports){
+},{"./imap.utilities":10}],"imap":[function(require,module,exports){
+module.exports=require('/esTPA');
+},{}],14:[function(require,module,exports){
 require=(function(e,t,n,r){function i(r){if(!n[r]){if(!t[r]){if(e)return e(r);throw new Error("Cannot find module '"+r+"'")}var s=n[r]={exports:{}};t[r][0](function(e){var n=t[r][1][e];return i(n?n:e)},s,s.exports)}return n[r].exports}for(var s=0;s<r.length;s++)i(r[s]);return i})(typeof require!=="undefined"&&require,{1:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
@@ -11328,7 +11424,7 @@ SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 },{}]},{},[])
 ;;module.exports=require("buffer-browserify")
 
-},{}],"qIWmyf":[function(require,module,exports){
+},{}],"/esTPA":[function(require,module,exports){
 (function(process,Buffer){var assert = require('assert'),
     tls = require('tls'),
     isDate = require('util').isDate,
@@ -11462,7 +11558,6 @@ ImapConnection.prototype.connect = function(loginCb) {
   //socket.setTimeout(0);
 
   if (this._options.secure) {
-    /*
     var tlsOptions = {};
     for (var k in this._options.secure)
       tlsOptions[k] = this._options.secure[k];
@@ -11471,16 +11566,17 @@ ImapConnection.prototype.connect = function(loginCb) {
       socket = tls.connect(null, tlsOptions, onconnect);
     else
       socket = tls.connect(tlsOptions, onconnect);
-  } else
-    */
+  } else {
+    state.conn.once('connect', onconnect);
   }
 
-  state.conn.once('connect', onconnect);
-
-  socket.on('_created', function() {
-    console.log("_created");
-    state.conn.connect(this._options.port, this._options.host);
-  }.bind(this));
+  if (typeof(chrome) == "undefined") {
+    state.conn.connect(self._options.port, self._options.host);
+  } else {
+    socket.on('_created', function() {
+      state.conn.connect(self._options.port, self._options.host);
+    });
+  }
 
   function onconnect() {
     state.conn = socket; // re-assign for secure connections
@@ -11535,20 +11631,17 @@ ImapConnection.prototype.connect = function(loginCb) {
       // server
       self._send('LIST "" ""', loginCb);
     };
-    //setTimeout(function() {
-    console.log("HACK");
-      // First, get the supported (pre-auth or otherwise) capabilities:
-      self._send('CAPABILITY', function() {
-        // No need to attempt the login sequence if we're on a PREAUTH
-        // connection.
-        if (state.status !== STATES.AUTH) {
-          // First get pre-auth capabilities, including server-supported auth
-          // mechanisms
-          self._login(reentry);
-        } else
-          reentry();
-      });
-    //}, 5000); //HACK!
+    // First, get the supported (pre-auth or otherwise) capabilities:
+    self._send('CAPABILITY', function() {
+      // No need to attempt the login sequence if we're on a PREAUTH
+      // connection.
+      if (state.status !== STATES.AUTH) {
+        // First get pre-auth capabilities, including server-supported auth
+        // mechanisms
+        self._login(reentry);
+      } else
+        reentry();
+    });
   });
 
   function read(b) {
@@ -11591,20 +11684,9 @@ ImapConnection.prototype.connect = function(loginCb) {
     }
   }
 
-  //socket.on('data', ondata);
-  socket.on('data', ondata2);
-
-  function ondata2(b) {
-    console.log("ondata2", b.toString(), b.toString().length);
-    //TLS.process(b.toString());
-    //TLS.process(forge.util.decode64(b.toString()));
-    //TLS.process(forge.util.decode64(b));
-    //TLS.process(b.toString());
-    TLS.process(b);
-  }
+  socket.on('data', ondata);
 
   function ondata(b) {
-  debugger;
     b.p || (b.p = 0);
     if (b.length === 0 || b.p >= b.length) return;
     self.debug&&self.debug('\n<== ' + inspect(b.toString('binary', b.p)) + '\n');
@@ -11630,9 +11712,10 @@ ImapConnection.prototype.connect = function(loginCb) {
         return;
     }
 
-    if ((r = utils.line(b, indata.line_s)) === false)
+    if ((r = utils.line(b, indata.line_s)) === false) {
+    debugger;
       return;
-    else {
+    } else {
       m = RE_LITHEADER.exec(r);
       if (indata.line)
         indata.line += r;
@@ -11689,7 +11772,7 @@ ImapConnection.prototype.connect = function(loginCb) {
             if (details['x-gm-labels'] !== undefined) {
               var labels = details['x-gm-labels'];
               for (var i=0, len=labels.length; i<len; ++i)
-                labels[i] = labels[i].replace(RE_ESCAPE, '\\');
+                labels[i] = ('' + labels[i]).replace(RE_ESCAPE, '\\')
             }
 
             if (isUnsolicited)
@@ -11742,8 +11825,6 @@ ImapConnection.prototype.connect = function(loginCb) {
                         fetches[i]._msg.emit('headers', headers);
                       } else {
                         var data = new Buffer(val, 'binary');
-                        console.log('wang');
-                        debugger;
                         fetches[i]._msg.emit('data', data);
                       }
                     }
@@ -11920,6 +12001,7 @@ ImapConnection.prototype.connect = function(loginCb) {
               if (!state.isReady) {
                 clearTimeout(state.tmrConn);
                 state.isReady = true;
+                console.log('READY!!!!!!!!!!!!!!!!');
                 state.conn.emit('ready');
               }
             } else if (code === 'ALERT')
@@ -11943,7 +12025,7 @@ ImapConnection.prototype.connect = function(loginCb) {
                 for (i=0,len=keywords.length; i<len; ++i)
                   permFlags.splice(permFlags.indexOf(keywords[i]), 1);
                 state.box.permFlags = permFlags.map(function(f) {
-                                        return f.substr(1);
+                                        return f.substr(1).toLowerCase();
                                       });
               }
             } else if (state.status === STATES.BOXSELECTED) {
@@ -12820,7 +12902,7 @@ ImapConnection.prototype._store = function(which, uids, flags, isAdding, cb) {
     if (!isKeywords) {
       if (flags[i][0] === '\\')
         flags[i] = flags[i].substr(1);
-      if (this._state.box.permFlags.indexOf(flags[i]) === -1
+      if (this._state.box.permFlags.indexOf(flags[i].toLowerCase()) === -1
           || flags[i] === '*')
         throw new Error('The flag "' + flags[i]
                         + '" is not allowed by the server for this mailbox');
@@ -12996,7 +13078,7 @@ function ImapFetch() {
 inherits(ImapFetch, EventEmitter);
 
 })(require("__browserify_process"),require("__browserify_buffer").Buffer)
-},{"assert":"P++JCd","tls":6,"util":"+c0iQh","net":"8b6xEy","events":1,"./xregexp":7,"./imap.parsers":11,"./imap.utilities":8,"utf7":13,"__browserify_process":5,"__browserify_buffer":12}],10:[function(require,module,exports){
+},{"assert":"vYBjZZ","tls":7,"util":"DDZ1I6","net":"6y6stt","events":1,"./xregexp":9,"./imap.parsers":13,"./imap.utilities":10,"utf7":15,"__browserify_process":6,"__browserify_buffer":14}],12:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -13082,7 +13164,7 @@ inherits(ImapFetch, EventEmitter);
 	module.exports.fromByteArray = uint8ToBase64;
 }());
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 (function(){var Buffer = require('buffer').Buffer;
 
 function encode(str) {
@@ -13183,5 +13265,311 @@ exports.imap.decode = function(str) {
 };
 
 })()
-},{"buffer":2}]},{},[3])
+},{"buffer":2}],16:[function(require,module,exports){
+var Stream = require('stream');
+
+var Response = module.exports = function (res) {
+    this.offset = 0;
+    this.readable = true;
+};
+
+Response.prototype = new Stream;
+
+var capable = {
+    streaming : true,
+    status2 : true
+};
+
+function parseHeaders (res) {
+    var lines = res.getAllResponseHeaders().split(/\r?\n/);
+    var headers = {};
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line === '') continue;
+        
+        var m = line.match(/^([^:]+):\s*(.*)/);
+        if (m) {
+            var key = m[1].toLowerCase(), value = m[2];
+            
+            if (headers[key] !== undefined) {
+            
+                if (isArray(headers[key])) {
+                    headers[key].push(value);
+                }
+                else {
+                    headers[key] = [ headers[key], value ];
+                }
+            }
+            else {
+                headers[key] = value;
+            }
+        }
+        else {
+            headers[line] = true;
+        }
+    }
+    return headers;
+}
+
+Response.prototype.getResponse = function (xhr) {
+    var respType = String(xhr.responseType).toLowerCase();
+    if (respType === 'blob') return xhr.responseBlob || xhr.response;
+    if (respType === 'arraybuffer') return xhr.response;
+    return xhr.responseText;
+}
+
+Response.prototype.getHeader = function (key) {
+    return this.headers[key.toLowerCase()];
+};
+
+Response.prototype.handle = function (res) {
+    if (res.readyState === 2 && capable.status2) {
+        try {
+            this.statusCode = res.status;
+            this.headers = parseHeaders(res);
+        }
+        catch (err) {
+            capable.status2 = false;
+        }
+        
+        if (capable.status2) {
+            this.emit('ready');
+        }
+    }
+    else if (capable.streaming && res.readyState === 3) {
+        try {
+            if (!this.statusCode) {
+                this.statusCode = res.status;
+                this.headers = parseHeaders(res);
+                this.emit('ready');
+            }
+        }
+        catch (err) {}
+        
+        try {
+            this._emitData(res);
+        }
+        catch (err) {
+            capable.streaming = false;
+        }
+    }
+    else if (res.readyState === 4) {
+        if (!this.statusCode) {
+            this.statusCode = res.status;
+            this.emit('ready');
+        }
+        this._emitData(res);
+        
+        if (res.error) {
+            this.emit('error', this.getResponse(res));
+        }
+        else this.emit('end');
+        
+        this.emit('close');
+    }
+};
+
+Response.prototype._emitData = function (res) {
+    var respBody = this.getResponse(res);
+    if (respBody.toString().match(/ArrayBuffer/)) {
+        this.emit('data', new Uint8Array(respBody, this.offset));
+        this.offset = respBody.byteLength;
+        return;
+    }
+    if (respBody.length > this.offset) {
+        this.emit('data', respBody.slice(this.offset));
+        this.offset = respBody.length;
+    }
+};
+
+var isArray = Array.isArray || function (xs) {
+    return Object.prototype.toString.call(xs) === '[object Array]';
+};
+
+},{"stream":5}],8:[function(require,module,exports){
+(function(){var Stream = require('stream');
+var Response = require('./response');
+var concatStream = require('concat-stream')
+var Buffer = require('buffer')
+
+var Request = module.exports = function (xhr, params) {
+    var self = this;
+    self.writable = true;
+    self.xhr = xhr;
+    self.body = concatStream()
+    
+    var uri = params.host
+        + (params.port ? ':' + params.port : '')
+        + (params.path || '/')
+    ;
+    
+    xhr.open(
+        params.method || 'GET',
+        (params.scheme || 'http') + '://' + uri,
+        true
+    );
+    
+    if (params.headers) {
+        var keys = objectKeys(params.headers);
+        for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            if (!self.isSafeRequestHeader(key)) continue;
+            var value = params.headers[key];
+            if (isArray(value)) {
+                for (var j = 0; j < value.length; j++) {
+                    xhr.setRequestHeader(key, value[j]);
+                }
+            }
+            else xhr.setRequestHeader(key, value)
+        }
+    }
+    
+    if (params.auth) {
+        //basic auth
+        this.setHeader('Authorization', 'Basic ' + new Buffer(params.auth).toString('base64'));
+    }
+
+    var res = new Response;
+    res.on('close', function () {
+        self.emit('close');
+    });
+    
+    res.on('ready', function () {
+        self.emit('response', res);
+    });
+    
+    xhr.onreadystatechange = function () {
+        res.handle(xhr);
+    };
+};
+
+Request.prototype = new Stream;
+
+Request.prototype.setHeader = function (key, value) {
+    if (isArray(value)) {
+        for (var i = 0; i < value.length; i++) {
+            this.xhr.setRequestHeader(key, value[i]);
+        }
+    }
+    else {
+        this.xhr.setRequestHeader(key, value);
+    }
+};
+
+Request.prototype.write = function (s) {
+    this.body.write(s);
+};
+
+Request.prototype.destroy = function (s) {
+    this.xhr.abort();
+    this.emit('close');
+};
+
+Request.prototype.end = function (s) {
+    if (s !== undefined) this.body.write(s);
+    this.body.end()
+    this.xhr.send(this.body.getBody());
+};
+
+// Taken from http://dxr.mozilla.org/mozilla/mozilla-central/content/base/src/nsXMLHttpRequest.cpp.html
+Request.unsafeHeaders = [
+    "accept-charset",
+    "accept-encoding",
+    "access-control-request-headers",
+    "access-control-request-method",
+    "connection",
+    "content-length",
+    "cookie",
+    "cookie2",
+    "content-transfer-encoding",
+    "date",
+    "expect",
+    "host",
+    "keep-alive",
+    "origin",
+    "referer",
+    "te",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    "user-agent",
+    "via"
+];
+
+Request.prototype.isSafeRequestHeader = function (headerName) {
+    if (!headerName) return false;
+    return indexOf(Request.unsafeHeaders, headerName.toLowerCase()) === -1;
+};
+
+var objectKeys = Object.keys || function (obj) {
+    var keys = [];
+    for (var key in obj) keys.push(key);
+    return keys;
+};
+
+var isArray = Array.isArray || function (xs) {
+    return Object.prototype.toString.call(xs) === '[object Array]';
+};
+
+var indexOf = function (xs, x) {
+    if (xs.indexOf) return xs.indexOf(x);
+    for (var i = 0; i < xs.length; i++) {
+        if (xs[i] === x) return i;
+    }
+    return -1;
+};
+
+})()
+},{"stream":5,"buffer":2,"./response":16,"concat-stream":17}],17:[function(require,module,exports){
+(function(Buffer){var stream = require('stream')
+var util = require('util')
+
+function ConcatStream(cb) {
+  stream.Stream.call(this)
+  this.writable = true
+  if (cb) this.cb = cb
+  this.body = []
+  if (this.cb) this.on('error', cb)
+}
+
+util.inherits(ConcatStream, stream.Stream)
+
+ConcatStream.prototype.write = function(chunk) {
+  this.body.push(chunk)
+}
+
+ConcatStream.prototype.arrayConcat = function(arrs) {
+  if (arrs.length === 0) return []
+  if (arrs.length === 1) return arrs[0]
+  return arrs.reduce(function (a, b) { return a.concat(b) })
+}
+
+ConcatStream.prototype.isArray = function(arr) {
+  var isArray = Array.isArray(arr)
+  var isTypedArray = arr.toString().match(/Array/)
+  return isArray || isTypedArray
+}
+
+ConcatStream.prototype.getBody = function () {
+  if (this.body.length === 0) return
+  if (typeof(this.body[0]) === "string") return this.body.join('')
+  if (this.isArray(this.body[0])) return this.arrayConcat(this.body)
+  if (typeof(Buffer) !== "undefined" && Buffer.isBuffer(this.body[0])) {
+    return Buffer.concat(this.body)
+  }
+  return this.body
+}
+
+ConcatStream.prototype.end = function() {
+  if (this.cb) this.cb(false, this.getBody())
+}
+
+module.exports = function(cb) {
+  return new ConcatStream(cb)
+}
+
+module.exports.ConcatStream = ConcatStream
+
+})(require("__browserify_buffer").Buffer)
+},{"stream":5,"util":"DDZ1I6","__browserify_buffer":14}]},{},[3])
 ;

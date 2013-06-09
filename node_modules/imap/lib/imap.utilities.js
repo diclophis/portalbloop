@@ -196,7 +196,7 @@ var CHARR_CRLF = [13, 10];
 function line(b, s) {
   var len = b.length, p = b.p, start = p, ret = false, retest = false;
   while (p < len && !ret) {
-    if (b[p] === CHARR_CRLF[s.p]) {
+    if (b.get(p) === CHARR_CRLF[s.p]) {
       if (++s.p === 2)
         ret = true;
     } else {
