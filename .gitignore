@@ -1,2 +1,7 @@
 public/app.zip
-node_modules
+Xnode_modules
+node_modules/.bin/
+node_modules/browserify/
+node_modules/imap/
+node_modules/node-forge/
+node_modules/net-chromify/
