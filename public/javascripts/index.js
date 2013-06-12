@@ -48,8 +48,8 @@ if (typeof(chrome) == "undefined") {
 
     var search = function(onMessageFunc) {
       gmail.search([
-        'UNSEEN',
-        ['!HEADER', 'WANG', myAddress]
+        'UNSEEN'
+        //['!HEADER', 'WANG', myAddress]
       ], function(err, results) {
         if (err) {
           throw err;
@@ -94,7 +94,6 @@ if (typeof(chrome) == "undefined") {
           if (err) {
             throw err;
           } else {
-
             var foo = function(config) {
               var socket = {
               };
@@ -111,38 +110,31 @@ if (typeof(chrome) == "undefined") {
               });
               search(config.onmessage);
             };
-
             var connection = new RTCMultiConnection();
             connection.session = {
               audio: true,
               video: true
             };
-            connection.transmitRoomOnce = true;
+            //connection.transmitRoomOnce = true;
             connection.openSignalingChannel = foo;
-
             connection.onstream = function (e) {
               //if (e.type === 'local') mainVideo.src = e.blobURL;
               //if (e.type === 'remote') document.body.appendChild(e.mediaElement);
               document.body.appendChild(e.mediaElement);
             };
-
             document.body.className = "connected";
-
             document.getElementById("foo").onclick = function() {
               // to create/open a new session
               // it should be called "only-once" by the session-initiator
               connection.open(sessionWang);
             };
-
             document.getElementById("bar").onclick = function() {
               connection.connect(sessionWang);
             };
-
             document.getElementById("baz").onclick = function() {
               // to create/open a new session
               // it should be called "only-once" by the session-initiator
             };
-
           }
         });
       }
