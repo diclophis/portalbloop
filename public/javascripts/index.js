@@ -9,6 +9,7 @@ var sessionWang = "wtf12333";
 var sender = Math.round(Math.random() * 60535) + 5000;
 var myAddress = secret.user + '+' + sender + '@gmail.com';
 var toAddress = secret.user + '@gmail.com';
+var startDate = new Date();
 
 function main(onConnectCallback, onMessageFunction) {
   var gmail = new imap({
@@ -23,45 +24,53 @@ function main(onConnectCallback, onMessageFunction) {
     port: 8000,
     secure: false,
     connTimeout: 60 * 1000,
-    debug: function(w) { console.log(w); }
+    //debug: function(w) { console.log(w); }
   });
 
   gmail.on('mail', function(mail) {
+    console.log(mail);
     gmail.search([
       'UNSEEN',
-      ['SINCE', 'May 20, 2010'],
-      ['!FROM', myAddress]
+      ['SINCE', 'May 20, 2010']
+      //['SINCE', startDate]
+      //['!FROM', myAddress]
+      //'HEADER' - Requires two string values, with the first being the header name and the second being the value to search for.
+      //['!HEADER', 'WANG', myAddress]
     ], function(err, results) {
+      console.log("search results", results);
       if (err) {
         throw err;
       }
-      gmail.fetch(results,
-        { 
-          //headers: ['from', 'to', 'subject', 'date'],
-          //headers: [],
-          body: true,
-          cb: function(fetch) {
-            fetch.on('message', function(msg) {
-              console.log('Saw message ', msg);
-              msg.on('body', function(body) {
-                var messageAsJson = body; //'{"wang":"chung"}';
-                onMessageFunction(messageAsJson);
-              });
-              //msg.on('headers', function(hdrs) {
-              //  console.log('Headers for no. ' + msg.seqno + ': ' + console.log(hdrs));
-              //});
-              //msg.on('end', function() {
-              //  console.log('Finished message no. ' + msg.seqno);
-              //});
+      //if (results.length == 0) {
+      //  return;
+      //}
+      gmail.fetch(results, { 
+        //headers: ['from', 'to', 'subject', 'date'],
+        //headers: [],
+        body: true,
+        cb: function(fetch) {
+          fetch.on('message', function(msg) {
+            msg.on('body', function(body) {
+              var messageAsJson = body; //'{"wang":"chung"}';
+              console.log('Saw message ', msg, body);
+              onMessageFunction(messageAsJson);
             });
-          }
-        }, function(err) {
-          if (err) throw err;
-          console.log('Done fetching all messages!');
+            //msg.on('headers', function(hdrs) {
+            //  console.log('Headers for no. ' + msg.seqno + ': ' + console.log(hdrs));
+            //});
+            //msg.on('end', function() {
+            //  console.log('Finished message no. ' + msg.seqno);
+            //});
+          });
         }
-      );
+      },
+      function(err) {
+        if (err) {
+          throw err;
+        }
+        console.log('Done fetching all messages!');
+      });
     });
-
   });
 
   gmail.connect(function(err) {
@@ -92,7 +101,11 @@ function main(onConnectCallback, onMessageFunction) {
   });
 
             var appendEmail = function(data) {
-              gmail.append("From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n", {
+            //debugger;
+              //var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
+              var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
+              console.log(out);
+              gmail.append(out, {
                 mailbox: "INBOX"
               }, function(err) {
                 if (err) {
@@ -170,14 +183,14 @@ if (typeof(chrome) == "undefined") {
 
       var thingThatIsWritable = main(doTheCallback, function(messageAsJson) {
         //{"sessionid":"wtf12333","userid":"DHH1I699-C4BO6R","session":{"audio":true,"video":true},"extra":{}}
-        console.log(messageAsJson);
+        //console.log(messageAsJson);
         var messageAsObject = JSON.parse(messageAsJson);
         config.onmessage(messageAsObject);
       });
 
       socket.send = function (messageAsObject) {
         var messageAsJson = JSON.stringify(messageAsObject);
-        //console.log("need to send", messageAsJson);
+        console.log("need to send", messageAsJson);
         thingThatIsWritable(messageAsJson);
       };
 
@@ -247,7 +260,6 @@ if (typeof(chrome) == "undefined") {
     document.getElementById("baz").onclick = function() {
       // to create/open a new session
       // it should be called "only-once" by the session-initiator
-      window.location.reload();
     };
   });
 }
