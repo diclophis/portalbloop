@@ -34,7 +34,7 @@ if (typeof(chrome) == "undefined") {
       port: 8000,
       secure: false,
       connTimeout: 60 * 1000,
-      debug: function(w) { console.log(w); }
+      //debug: function(w) { console.log(w); }
     });
 
     var appendEmail = function(box, data) {
@@ -48,54 +48,53 @@ if (typeof(chrome) == "undefined") {
       });
     };
 
-    var search = function(box, onMessageFunc, doneFunc) {
-      gmail.openBox(box, true, function(err) {
+    var search = function(box, onMessageFunc) {
+      var abc = when.defer();
+      var needsafun = function() {
+      };
+      gmail.openBox(box, false, function(err) {
         if (err) {
           throw err;
         } else {
           gmail.search([
             'UNSEEN'
-            //['!HEADER', 'WANG', myAddress]
           ], function(err, results) {
             if (err) {
               throw err;
             }
             if (results.length == 0) {
-              //console.log("no results...");
-              return doneFunc("skip");
+              abc.resolve(needsafun);
+            } else {
+              gmail.fetch(results, {}, {
+                body: true,
+                cb: function(fetch) {
+                  fetch.on('message', function(msg) {
+                    var body = "";
+                    msg.on('data', function(chunk) {
+                      body += chunk;
+                    });
+                    msg.on('end', function() {
+                      var messageAsJson = body;
+                      var messageAsObject = JSON.parse(messageAsJson);
+                      onMessageFunc(messageAsObject.data);
+                    });
+                  });
+                }
+              },
+              function(err) {
+                if (err) {
+                  throw err;
+                }
+                //abc.resolve("matched");
+                console.log("matched");
+                abc.resolve(needsafun);
+              });
             }
-            gmail.fetch(results, {}, {
-              //headers: ['from', 'to', 'subject', 'date'],
-              //headers: [],
-              body: true,
-              cb: function(fetch) {
-                fetch.on('message', function(msg) {
-                  var body = "";
-                  msg.on('data', function(chunk) {
-                    body += chunk;
-                  });
-                  msg.on('end', function() {
-    //console.log("message end", body);
-                    var messageAsJson = body;
-                    var messageAsObject = JSON.parse(messageAsJson);
-                    onMessageFunc(messageAsObject.data);
-                  });
-                });
-                //fetch.on('end', function(wha) {
-                //  //doneFunc("matched");
-                //});
-              }
-            },
-            function(err) {
-              if (err) {
-                throw err;
-              }
-              doneFunc("matched");
-              //console.log('Done fetching all messages!');
-            });
           });
         }
       });
+
+      return abc.promise;
     };
 
     gmail.connect(function(err) {
@@ -110,18 +109,26 @@ if (typeof(chrome) == "undefined") {
       var searches = [];
       for (var i=0; i<channels.length; i++) {
         var channl = channels[i];
-        var abc = when.defer();
         var channelCallbackFunc = channl.callbackFunc;
         var channelBox = channl.box;
-        search(channelBox, channelCallbackFunc, function(msg) { 
-          console.log("doneFunc", msg, abc);
-          abc.resolve(msg);
-        });
-        searches.push(abc.promise);
+        var prom = search(channelBox, channelCallbackFunc);
+        //function(msg) { 
+        //  console.log("doneFunc", msg, abc);
+        //  abc.resolve(msg);
+        //});
+        searches.push(prom);
       }
 console.log("!@#!#!@#!@#!", searches);
-      var tail = sequence(searches);
+      var tail = sequence((searches));
       tail.then(function(a) {
+        console.log("resolve!!!!!", a);
+      },
+      function(b) {
+        console.log("fail", b);
+      },
+      function(c) {
+        console.log("notify", c);
+      }).ensure(function(a) {
         console.log("loop", a);
         setTimeout(multiplex, 1000);
       });
@@ -147,24 +154,23 @@ console.log("!@#!#!@#!@#!", searches);
           var channel = config.channel || this.channel || 'INBOX';
           socket.send = function (messageAsObject) {
             var messageAsJson = JSON.stringify({data: messageAsObject});
-            console.log("need to send", channel, messageAsJson);
+            //console.log("need to send", channel, messageAsJson);
             appendEmail(channel, messageAsJson);
           };
-          if (config.callback) {
-            setTimeout(config.callback, 1, socket);
-          }
           channels.push({
             box: channel,
             callbackFunc: config.onmessage
           });
-console.log("pushed", channel, channels);
-          if (channel != "INBOX") {
+          //if (channel != "INBOX") {
             gmail.addBox(channel, function(err) {
               if (err) {
                 //throw err;
               }
+              if (config.callback) {
+                setTimeout(config.callback, 1, socket);
+              }
             });
-          }
+          //}
           //gmail.on('mail', function(mail) {
           //  search(config.onmessage);
           //});
@@ -175,7 +181,7 @@ console.log("pushed", channel, channels);
           audio: true,
           video: true
         };
-        //connection.transmitRoomOnce = true;
+        connection.transmitRoomOnce = true;
         connection.openSignalingChannel = foo;
         connection.onstream = function (e) {
           //if (e.type === 'local') mainVideo.src = e.blobURL;
