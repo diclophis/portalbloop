@@ -10,7 +10,7 @@ var sender = Math.round(Math.random() * 60535) + 5000;
 var myAddress = secret.user + '+' + sender + '@gmail.com';
 var toAddress = secret.user + '@gmail.com';
 
-function main(onMessageFunction) {
+function main(onConnectCallback, onMessageFunction) {
   var gmail = new imap({
     user: secret.user,
     password: secret.pass,
@@ -36,16 +36,17 @@ function main(onMessageFunction) {
         throw err;
       }
       gmail.fetch(results,
-        { headers: ['from', 'to', 'subject', 'date'],
+        { 
+          //headers: ['from', 'to', 'subject', 'date'],
+          //headers: [],
+          body: true,
           cb: function(fetch) {
             fetch.on('message', function(msg) {
               console.log('Saw message ', msg);
-
-
-    var messageAsJson = "{wang:true}";
-    onMessageFunction(messageAsJson);
-
-
+              msg.on('body', function(body) {
+                var messageAsJson = body; //'{"wang":"chung"}';
+                onMessageFunction(messageAsJson);
+              });
               //msg.on('headers', function(hdrs) {
               //  console.log('Headers for no. ' + msg.seqno + ': ' + console.log(hdrs));
               //});
@@ -84,20 +85,23 @@ function main(onMessageFunction) {
             })();
           });
           */
+          onConnectCallback();
         }
       });
     }
   });
 
-            (function appendEmail() {
-              gmail.append("From: jon.j.mahone@gmail.com\r\nTo: jon.j.mahone@gmail.com\r\nSubject: data\r\ndata\r\n", {
+            var appendEmail = function(data) {
+              gmail.append("From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n", {
                 mailbox: "INBOX"
               }, function(err) {
-                console.log("append errored", err);
+                if (err) {
+                  throw err;
+                }
               });
-              console.log("???????????", appendEmail);
-              setTimeout(appendEmail, 1000);
-            });
+            };
+
+            return appendEmail;
 
   /*
       gmail.search([ 'UNSEEN', ['SINCE', 'May 20, 2010'] ], function(err, results) {
@@ -145,6 +149,7 @@ if (typeof(chrome) == "undefined") {
       audio: true,
       video: true
     };
+    connection.transmitRoomOnce = true;
     /*
     connection.autoCloseEntireSession = true;
     //connection.transmitRoomOnce = false;
@@ -154,31 +159,37 @@ if (typeof(chrome) == "undefined") {
     connection.openSignalingChannel = function(config) {
       //var channel = config.channel || this.channel || 'Default-Socket';
       //console.log("openSignalingChannel", channel, sender, config);
-      console.log(config);
+      //console.log(config);
 
       var socket = {
       };
 
-      var thingThatIsWritable = main(function(messageAsJson) {
+      var doTheCallback = function() {
+        config.callback(socket);
+      };
+
+      var thingThatIsWritable = main(doTheCallback, function(messageAsJson) {
         //{"sessionid":"wtf12333","userid":"DHH1I699-C4BO6R","session":{"audio":true,"video":true},"extra":{}}
+        console.log(messageAsJson);
         var messageAsObject = JSON.parse(messageAsJson);
         config.onmessage(messageAsObject);
       });
 
       socket.send = function (messageAsObject) {
         var messageAsJson = JSON.stringify(messageAsObject);
-        console.log("need to send", messageAsJson);
-        thingThatIsWritable.write(messageAsJson);
+        //console.log("need to send", messageAsJson);
+        thingThatIsWritable(messageAsJson);
       };
 
-      if (config.callback) {
-        console.log("setting socket");
-        setTimeout(config.callback, 1, socket);
-      }
+      //if (config.callback) {
+      //  console.log("setting socket");
+      //  //setTimeout(config.callback, 1, socket);
+      //
+      //}
 
-      if (config.onopen) {
-        setTimeout(config.onopen, 1);
-      }
+      //if (config.onopen) {
+      //  setTimeout(config.onopen, 1);
+      //}
     };
 
 /*
@@ -200,7 +211,7 @@ if (typeof(chrome) == "undefined") {
 
     // get access to local or remote streams
     connection.onstream = function (e) {
-      console.log("onstream", e);
+      //console.log("onstream", e);
       //if (e.type === 'local') mainVideo.src = e.blobURL;
       //if (e.type === 'remote') document.body.appendChild(e.mediaElement);
       document.body.appendChild(e.mediaElement);
@@ -231,6 +242,12 @@ if (typeof(chrome) == "undefined") {
 
     document.getElementById("bar").onclick = function() {
       connection.connect(sessionWang);
+    };
+
+    document.getElementById("baz").onclick = function() {
+      // to create/open a new session
+      // it should be called "only-once" by the session-initiator
+      window.location.reload();
     };
   });
 }
