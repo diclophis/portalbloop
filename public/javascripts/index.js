@@ -35,10 +35,10 @@ if (typeof(chrome) == "undefined") {
       //debug: function(w) { console.log(w); }
     });
 
-    var appendEmail = function(data) {
+    var appendEmail = function(box, data) {
       var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
       gmail.append(out, {
-        mailbox: "INBOX"
+        mailbox: box 
       }, function(err) {
         if (err) {
           throw err;
@@ -46,43 +46,52 @@ if (typeof(chrome) == "undefined") {
       });
     };
 
-    var search = function(onMessageFunc) {
-      gmail.search([
-        'UNSEEN'
-        //['!HEADER', 'WANG', myAddress]
-      ], function(err, results) {
+    var search = function(box, onMessageFunc, doneFunc) {
+      gmail.openBox(box, true, function(err) {
         if (err) {
           throw err;
-        }
-        if (results.length == 0) {
-          //console.log("no results...");
-          return;
-        }
-        gmail.fetch(results, {}, {
-          //headers: ['from', 'to', 'subject', 'date'],
-          //headers: [],
-          body: true,
-          cb: function(fetch) {
-            fetch.on('message', function(msg) {
-              var body = "";
-              msg.on('data', function(chunk) {
-                body += chunk;
-              });
-              msg.on('end', function() {
-//console.log("message end", body);
-                var messageAsJson = body;
-                var messageAsObject = JSON.parse(messageAsJson);
-                onMessageFunc(messageAsObject.data);
-              });
+        } else {
+          gmail.search([
+            'UNSEEN'
+            //['!HEADER', 'WANG', myAddress]
+          ], function(err, results) {
+            if (err) {
+              throw err;
+            }
+            if (results.length == 0) {
+              //console.log("no results...");
+              return doneFunc("skip");
+            }
+            gmail.fetch(results, {}, {
+              //headers: ['from', 'to', 'subject', 'date'],
+              //headers: [],
+              body: true,
+              cb: function(fetch) {
+                fetch.on('message', function(msg) {
+                  var body = "";
+                  msg.on('data', function(chunk) {
+                    body += chunk;
+                  });
+                  msg.on('end', function() {
+    //console.log("message end", body);
+                    var messageAsJson = body;
+                    var messageAsObject = JSON.parse(messageAsJson);
+                    onMessageFunc(messageAsObject.data);
+                  });
+                });
+                fetch.on('end', function(wha) {
+                  doneFunc("matched");
+                });
+              }
+            },
+            function(err) {
+              if (err) {
+                throw err;
+              }
+              //console.log('Done fetching all messages!');
             });
-          }
-        },
-        function(err) {
-          if (err) {
-            throw err;
-          }
-          //console.log('Done fetching all messages!');
-        });
+          });
+        }
       });
     };
 
@@ -90,53 +99,73 @@ if (typeof(chrome) == "undefined") {
       if (err) {
         throw err;
       } else {
-        gmail.openBox('INBOX', true, function(err) {
-          if (err) {
-            throw err;
-          } else {
-            var foo = function(config) {
-              var socket = {
-              };
-              socket.send = function (messageAsObject) {
-                var messageAsJson = JSON.stringify({data: messageAsObject});
-                console.log("need to send", messageAsJson);
-                appendEmail(messageAsJson);
-              };
-              if (config.callback) {
-                setTimeout(config.callback, 1, socket);
-              }
-              gmail.on('mail', function(mail) {
-                search(config.onmessage);
-              });
-              search(config.onmessage);
-            };
-            var connection = new RTCMultiConnection();
-            connection.session = {
-              audio: true,
-              video: true
-            };
-            //connection.transmitRoomOnce = true;
-            connection.openSignalingChannel = foo;
-            connection.onstream = function (e) {
-              //if (e.type === 'local') mainVideo.src = e.blobURL;
-              //if (e.type === 'remote') document.body.appendChild(e.mediaElement);
-              document.body.appendChild(e.mediaElement);
-            };
-            document.body.className = "connected";
-            document.getElementById("foo").onclick = function() {
-              // to create/open a new session
-              // it should be called "only-once" by the session-initiator
-              connection.open(sessionWang);
-            };
-            document.getElementById("bar").onclick = function() {
-              connection.connect(sessionWang);
-            };
-            document.getElementById("baz").onclick = function() {
-              // to create/open a new session
-              // it should be called "only-once" by the session-initiator
-            };
+           
+        var channels = new Array();
+
+        (function multiplex() {
+          for (var i=0; i<channels.length; i++) {
+            //  search(config.onmessage);
+            var channelCallbackFunc = channels[i].callbackFunc;
+            var channelBox = channels[i].box;
+            search(channelBox, channelCallbackFunc, function(msg) { console.log(msg); });
           }
-        });
+          setTimeout(multiplex, 1000);
+        })();
+
+        var foo = function(config) {
+          console.log("wtf!!!", config);
+          var socket = {
+          };
+          var channel = config.channel || this.channel || 'INBOX';
+          socket.send = function (messageAsObject) {
+            var messageAsJson = JSON.stringify({data: messageAsObject});
+            console.log("need to send", messageAsJson);
+            appendEmail(channel, messageAsJson);
+          };
+          if (config.callback) {
+            setTimeout(config.callback, 1, socket);
+          }
+          channels.push({
+            box: channel,
+            callbackFunc: config.onmessage
+          });
+          if (channel != "INBOX") {
+            gmail.addBox(channel, function(err) {
+              if (err) {
+                //throw err;
+              }
+            });
+          }
+          //gmail.on('mail', function(mail) {
+          //  search(config.onmessage);
+          //});
+          //search(config.onmessage);
+        };
+        var connection = new RTCMultiConnection();
+        connection.session = {
+          audio: true,
+          video: true
+        };
+        //connection.transmitRoomOnce = true;
+        connection.openSignalingChannel = foo;
+        connection.onstream = function (e) {
+          //if (e.type === 'local') mainVideo.src = e.blobURL;
+          //if (e.type === 'remote') document.body.appendChild(e.mediaElement);
+          document.body.appendChild(e.mediaElement);
+        };
+        document.body.className = "connected";
+        document.getElementById("foo").onclick = function() {
+          // to create/open a new session
+          // it should be called "only-once" by the session-initiator
+          connection.open(sessionWang);
+        };
+        document.getElementById("bar").onclick = function() {
+          connection.connect(sessionWang);
+        };
+        document.getElementById("baz").onclick = function() {
+          // to create/open a new session
+          // it should be called "only-once" by the session-initiator
+        };
       }
     });
   });
