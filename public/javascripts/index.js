@@ -1,8 +1,10 @@
 //
 
-var assert = require('assert')
-var util = require('util')
+var assert = require('assert');
+var util = require('util');
 var imap = require('imap');
+var when = require('when');
+var sequence = require('when/sequence');
 var secret = require('./secret');
 
 var sessionWang = "wtf12333";
@@ -32,7 +34,7 @@ if (typeof(chrome) == "undefined") {
       port: 8000,
       secure: false,
       connTimeout: 60 * 1000,
-      //debug: function(w) { console.log(w); }
+      debug: function(w) { console.log(w); }
     });
 
     var appendEmail = function(box, data) {
@@ -79,15 +81,16 @@ if (typeof(chrome) == "undefined") {
                     onMessageFunc(messageAsObject.data);
                   });
                 });
-                fetch.on('end', function(wha) {
-                  doneFunc("matched");
-                });
+                //fetch.on('end', function(wha) {
+                //  //doneFunc("matched");
+                //});
               }
             },
             function(err) {
               if (err) {
                 throw err;
               }
+              doneFunc("matched");
               //console.log('Done fetching all messages!');
             });
           });
@@ -100,16 +103,41 @@ if (typeof(chrome) == "undefined") {
         throw err;
       } else {
            
-        var channels = new Array();
-
+        var channels = [];
         (function multiplex() {
+
+  if (channels.length > 0) {
+      var searches = [];
+      for (var i=0; i<channels.length; i++) {
+        var channl = channels[i];
+        var abc = when.defer();
+        var channelCallbackFunc = channl.callbackFunc;
+        var channelBox = channl.box;
+        search(channelBox, channelCallbackFunc, function(msg) { 
+          console.log("doneFunc", msg, abc);
+          abc.resolve(msg);
+        });
+        searches.push(abc.promise);
+      }
+console.log("!@#!#!@#!@#!", searches);
+      var tail = sequence(searches);
+      tail.then(function(a) {
+        console.log("loop", a);
+        setTimeout(multiplex, 1000);
+      });
+  } else {
+    console.log("loop ...");
+    setTimeout(multiplex, 1000);
+  }
+
+/*
           for (var i=0; i<channels.length; i++) {
             //  search(config.onmessage);
             var channelCallbackFunc = channels[i].callbackFunc;
             var channelBox = channels[i].box;
             search(channelBox, channelCallbackFunc, function(msg) { console.log(msg); });
           }
-          setTimeout(multiplex, 1000);
+*/
         })();
 
         var foo = function(config) {
@@ -119,7 +147,7 @@ if (typeof(chrome) == "undefined") {
           var channel = config.channel || this.channel || 'INBOX';
           socket.send = function (messageAsObject) {
             var messageAsJson = JSON.stringify({data: messageAsObject});
-            console.log("need to send", messageAsJson);
+            console.log("need to send", channel, messageAsJson);
             appendEmail(channel, messageAsJson);
           };
           if (config.callback) {
@@ -129,6 +157,7 @@ if (typeof(chrome) == "undefined") {
             box: channel,
             callbackFunc: config.onmessage
           });
+console.log("pushed", channel, channels);
           if (channel != "INBOX") {
             gmail.addBox(channel, function(err) {
               if (err) {
