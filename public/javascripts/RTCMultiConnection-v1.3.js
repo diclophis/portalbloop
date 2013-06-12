@@ -664,9 +664,9 @@
             sockets = sockets.swap();
         }
 
-        window.onbeforeunload = function () {
-            clearSession();
-        };
+        //window.onbeforeunload = function () {
+        //    clearSession();
+        //};
 
         window.onkeyup = function (e) {
             if (e.keyCode == 116)
