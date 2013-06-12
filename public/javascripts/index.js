@@ -5,6 +5,9 @@ var util = require('util')
 var imap = require('imap');
 var secret = require('./secret');
 
+//var emitter = require('emitter');
+//emitter.setMaxListeners(1024);
+
 var sessionWang = "wtf12333";
 var sender = Math.round(Math.random() * 60535) + 5000;
 var myAddress = secret.user + '+' + sender + '@gmail.com';
@@ -31,28 +34,36 @@ function main(onConnectCallback, onMessageFunction) {
     console.log(mail);
     gmail.search([
       'UNSEEN',
-      ['SINCE', 'May 20, 2010']
-      //['SINCE', startDate]
+      //['SINCE', 'May 20, 2010']
+      //['SENTSINCE', startDate],
       //['!FROM', myAddress]
       //'HEADER' - Requires two string values, with the first being the header name and the second being the value to search for.
-      //['!HEADER', 'WANG', myAddress]
+      ['!HEADER', 'WANG', myAddress]
     ], function(err, results) {
       console.log("search results", results);
       if (err) {
         throw err;
       }
-      //if (results.length == 0) {
-      //  return;
-      //}
-      gmail.fetch(results, { 
+      if (results.length == 0) {
+        return;
+      }
+      gmail.fetch(results, {}, {
         //headers: ['from', 'to', 'subject', 'date'],
         //headers: [],
         body: true,
         cb: function(fetch) {
           fetch.on('message', function(msg) {
-            msg.on('body', function(body) {
+          //console.log("WANG!!!", fetch, msg);
+            var body = "";
+
+            msg.on('data', function(chunk) {
+            console.log("CHUNk", chunk);
+              body += chunk;
+            });
+
+            msg.on('end', function() {
               var messageAsJson = body; //'{"wang":"chung"}';
-              console.log('Saw message ', msg, body);
+              console.log('Saw message ', body);
               onMessageFunction(messageAsJson);
             });
             //msg.on('headers', function(hdrs) {
@@ -102,8 +113,8 @@ function main(onConnectCallback, onMessageFunction) {
 
             var appendEmail = function(data) {
             //debugger;
-              //var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
-              var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
+              var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
+              //var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
               console.log(out);
               gmail.append(out, {
                 mailbox: "INBOX"
@@ -162,7 +173,7 @@ if (typeof(chrome) == "undefined") {
       audio: true,
       video: true
     };
-    connection.transmitRoomOnce = true;
+    //connection.transmitRoomOnce = true;
     /*
     connection.autoCloseEntireSession = true;
     //connection.transmitRoomOnce = false;
@@ -172,12 +183,13 @@ if (typeof(chrome) == "undefined") {
     connection.openSignalingChannel = function(config) {
       //var channel = config.channel || this.channel || 'Default-Socket';
       //console.log("openSignalingChannel", channel, sender, config);
-      //console.log(config);
+      console.log(config);
 
       var socket = {
       };
 
       var doTheCallback = function() {
+      console.log("foo");
         config.callback(socket);
       };
 
