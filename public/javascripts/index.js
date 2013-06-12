@@ -12,6 +12,7 @@ var sender = Math.round(Math.random() * 60535) + 5000;
 var myAddress = secret.user + '+' + sender + '@gmail.com';
 var toAddress = secret.user + '@gmail.com';
 var startDate = new Date();
+var seenMessages = {};
 
 if (typeof(chrome) == "undefined") {
   var http = require('http');
@@ -69,15 +70,19 @@ if (typeof(chrome) == "undefined") {
                 body: true,
                 cb: function(fetch) {
                   fetch.on('message', function(msg) {
-                    var body = "";
-                    msg.on('data', function(chunk) {
-                      body += chunk;
-                    });
-                    msg.on('end', function() {
-                      var messageAsJson = body;
-                      var messageAsObject = JSON.parse(messageAsJson);
-                      onMessageFunc(messageAsObject.data);
-                    });
+                    if (true || typeof(seenMessages[msg.uid]) === "undefined") {
+                      seenMessages[msg.uid] = msg;
+console.log("!!!!!!!!!!!!!!!!!!!");
+                      var body = "";
+                      msg.on('data', function(chunk) {
+                        body += chunk;
+                      });
+                      msg.on('end', function() {
+                        var messageAsJson = body;
+                        var messageAsObject = JSON.parse(messageAsJson);
+                        onMessageFunc(messageAsObject.data);
+                      });
+                    }
                   });
                 }
               },
