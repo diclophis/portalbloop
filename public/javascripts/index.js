@@ -148,10 +148,10 @@ if (typeof(chrome) == "undefined") {
             function(c) {
               //console.log("notify", c);
             }).ensure(function(a) {
-              setTimeout(multiplex, 1000);
+              setTimeout(multiplex, 100);
             });
           } else {
-            setTimeout(multiplex, 1000);
+            setTimeout(multiplex, 100);
           }
         })();
 
@@ -186,7 +186,7 @@ if (typeof(chrome) == "undefined") {
           audio: true,
           video: true
         };
-        //connection.transmitRoomOnce = true;
+        connection.transmitRoomOnce = true;
         connection.openSignalingChannel = foo;
         connection.onstream = function (e) {
           //if (e.type === 'local') mainVideo.src = e.blobURL;
