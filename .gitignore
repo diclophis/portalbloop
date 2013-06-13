@@ -1,6 +1,6 @@
 public/app.zip
 public/javascripts/node.js
-Xnode_modules
+node_modules
 node_modules/.bin/
 node_modules/browserify/
 node_modules/imap/
