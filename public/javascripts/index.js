@@ -13,6 +13,8 @@ var myAddress = secret.user + '+' + sender + '@gmail.com';
 var toAddress = secret.user + '@gmail.com';
 var startDate = new Date();
 var seenMessages = {};
+var channels = [];
+var outstarted = {};
 
 if (typeof(chrome) == "undefined") {
   throw "requires chrome";
@@ -34,7 +36,7 @@ if (typeof(chrome) == "undefined") {
     });
 
     var appendEmail = function(box, data) {
-      var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
+      var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nCHANNEL: " + box + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
       gmail.append(out, {
         //mailbox: 'WANG/' + box 
         mailbox: 'WANGCHUNG'
@@ -45,7 +47,7 @@ if (typeof(chrome) == "undefined") {
       });
     };
 
-    var search = function(box, onMessageFunc) {
+    var search = function() {
       var abc = when.defer();
       var needsafun = function() {
       };
@@ -65,8 +67,8 @@ if (typeof(chrome) == "undefined") {
             } else {
               var notseen = [];
               for (var i=0; i<results.length; i++) {
-                if (typeof(seenMessages['box-' + results[i]]) === "undefined") {
-                  seenMessages['box-' + results[i]] = true;
+                if (typeof(seenMessages[results[i]]) === "undefined") {
+                  seenMessages[results[i]] = true;
                   notseen.push(results[i]);
                 } else {
                 }
@@ -77,17 +79,26 @@ if (typeof(chrome) == "undefined") {
               } else {
                 gmail.fetch(notseen, {}, {
                   body: true,
+                  headers: 'CHANNEL',
                   cb: function(fetch) {
                     fetch.on('message', function(msg) {
                       var body = "";
+                      var thingy = null;
                       msg.on('data', function(chunk) {
                         body += chunk;
                       });
+                      msg.on('headers', function(headers) {
+                        //console.log(headers);
+                        thingy = headers.channel[0];
+                      });
                       msg.on('end', function() {
-                        //console.log("INBOUND!!!!", body);
+                        //console.log("inbound on channel", thingy);
                         var messageAsJson = body;
                         var messageAsObject = JSON.parse(messageAsJson);
-                        onMessageFunc(messageAsObject.data);
+                        //console.log(outstarted);
+                        if (outstarted[thingy]) {
+                          outstarted[thingy](messageAsObject.data);
+                        }
                       });
                     });
                   }
@@ -112,20 +123,21 @@ if (typeof(chrome) == "undefined") {
         throw err;
       } else {
            
-        var channels = [];
-        var outstarted = {};
 
         (function multiplex() {
           if (channels.length > 0) {
             var searches = [];
-            for (var i=0; i<channels.length; i++) {
-              var channl = channels[i];
-              var channelCallbackFunc = channl.callbackFunc;
-              var channelBox = channl.box;
+
+
+            //for (var i=0; i<channels.length; i++) {
+              //var channl = channels[i];
+              //var channelCallbackFunc = channl.callbackFunc;
+              //var channelBox = channl.box;
               //console.log(channelCallbackFunc);
-              var prom = search('WANGCHUNG', channelCallbackFunc);
+              var prom = search();
               searches.push(prom);
-            }
+            //}
+
             var tail = sequence(searches);
             tail.then(function(a) {
               //console.log("resolve!!!!!", a);
@@ -147,10 +159,11 @@ if (typeof(chrome) == "undefined") {
           var socket = {
           };
           var channel = config.channel || this.channel || 'WANGCHUNG';
+          outstarted[channel] = config.onmessage;
+          console.log("new channel", channel);
           socket.send = function (messageAsObject) {
             var messageAsJson = JSON.stringify({data: messageAsObject});
-            //console.log("OUTBOUND!!!!", messageAsJson);
-            outstarted[channel] = true;
+            //console.log("outbound on channel", channel);
             appendEmail(channel, messageAsJson);
           };
           gmail.addBox('WANGCHUNG', function(err) {
@@ -160,8 +173,8 @@ if (typeof(chrome) == "undefined") {
             }
             if (config.callback) {
               channels.push({
-                box: channel,
-                callbackFunc: config.onmessage
+                box: channel
+                //callbackFunc: config.onmessage
               });
               //console.log("CHAN", channels, outstarted);
               setTimeout(config.callback, 1, socket);
