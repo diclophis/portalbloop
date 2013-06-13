@@ -36,7 +36,8 @@ if (typeof(chrome) == "undefined") {
     var appendEmail = function(box, data) {
       var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
       gmail.append(out, {
-        mailbox: 'WANG/' + box 
+        //mailbox: 'WANG/' + box 
+        mailbox: 'WANGCHUNG'
       }, function(err) {
         if (err) {
           throw err;
@@ -48,7 +49,7 @@ if (typeof(chrome) == "undefined") {
       var abc = when.defer();
       var needsafun = function() {
       };
-      gmail.openBox('WANG/' + box, false, function(err) {
+      gmail.openBox('WANGCHUNG', false, function(err) {
         if (err) {
           throw err;
         } else {
@@ -83,7 +84,7 @@ if (typeof(chrome) == "undefined") {
                         body += chunk;
                       });
                       msg.on('end', function() {
-                        console.log("INBOUND!!!!", body);
+                        //console.log("INBOUND!!!!", body);
                         var messageAsJson = body;
                         var messageAsObject = JSON.parse(messageAsJson);
                         onMessageFunc(messageAsObject.data);
@@ -122,7 +123,7 @@ if (typeof(chrome) == "undefined") {
               var channelCallbackFunc = channl.callbackFunc;
               var channelBox = channl.box;
               //console.log(channelCallbackFunc);
-              var prom = search(channelBox, channelCallbackFunc);
+              var prom = search('WANGCHUNG', channelCallbackFunc);
               searches.push(prom);
             }
             var tail = sequence(searches);
@@ -145,24 +146,24 @@ if (typeof(chrome) == "undefined") {
         var foo = function(config) {
           var socket = {
           };
-          var channel = config.channel || this.channel || 'INBOX';
+          var channel = config.channel || this.channel || 'WANGCHUNG';
           socket.send = function (messageAsObject) {
             var messageAsJson = JSON.stringify({data: messageAsObject});
-            console.log("OUTBOUND!!!!", messageAsJson);
+            //console.log("OUTBOUND!!!!", messageAsJson);
             outstarted[channel] = true;
             appendEmail(channel, messageAsJson);
           };
-          gmail.addBox('WANG/' + channel, function(err) {
+          gmail.addBox('WANGCHUNG', function(err) {
             if (err) {
               //throw err;
-              console.log(err);
+              //console.log(err);
             }
             if (config.callback) {
               channels.push({
                 box: channel,
                 callbackFunc: config.onmessage
               });
-              console.log("CHAN", channels, outstarted);
+              //console.log("CHAN", channels, outstarted);
               setTimeout(config.callback, 1, socket);
             }
           });
@@ -172,7 +173,7 @@ if (typeof(chrome) == "undefined") {
           audio: true,
           video: true
         };
-        connection.transmitRoomOnce = true;
+        //connection.transmitRoomOnce = true;
         connection.openSignalingChannel = foo;
         connection.onstream = function (e) {
           //if (e.type === 'local') mainVideo.src = e.blobURL;
