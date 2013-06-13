@@ -471,6 +471,7 @@
             }
 
             function socketResponse(response) {
+console.log("????", response);
                 if (response.userid == self.userid)
                     return;
 
@@ -480,8 +481,8 @@
                     _config.renegotiate = response.renegotiate;
                     sdpInvoker(response.sdp);
                 }
-
                 if (response.candidate) {
+                debugger;
                     peer && peer.addICE({
                             sdpMLineIndex: response.candidate.sdpMLineIndex,
                             candidate: JSON.parse(response.candidate.candidate)
@@ -686,6 +687,7 @@
         var that = this,
             defaultSocket = root.openSignalingChannel({
                     onmessage: function (response) {
+                    console.log(self.userid, response);
                         if (response.userid == self.userid)
                             return;
                         if (isAcceptNewSession && response.sessionid && response.userid)
@@ -693,6 +695,7 @@
                         if (response.newParticipant && self.joinedARoom && self.broadcasterid === response.userid)
                             onNewParticipant(response.newParticipant, response.extra);
                         if (response.userid && response.targetUser == self.userid && response.participant && channels.indexOf(response.userid) == -1) {
+                        debugger;
                             channels += response.userid + '--';
                             newPrivateSocket({
                                     isofferer: true,

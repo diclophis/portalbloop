@@ -53,8 +53,8 @@ if (typeof(chrome) == "undefined") {
           throw err;
         } else {
           gmail.search([
-            'UNSEEN',
-            ['!HEADER', 'WANG', myAddress]
+            'UNSEEN'
+            //['!HEADER', 'WANG', myAddress]
           ], function(err, results) {
             if (err) {
               throw err;
@@ -64,8 +64,8 @@ if (typeof(chrome) == "undefined") {
             } else {
               var notseen = [];
               for (var i=0; i<results.length; i++) {
-                if (typeof(seenMessages[results[i]]) === "undefined") {
-                  seenMessages[results[i]] = true;
+                if (typeof(seenMessages['box-' + results[i]]) === "undefined") {
+                  seenMessages['box-' + results[i]] = true;
                   notseen.push(results[i]);
                 } else {
                 }
@@ -118,10 +118,10 @@ if (typeof(chrome) == "undefined") {
           if (channels.length > 0) {
             var searches = [];
             for (var i=0; i<channels.length; i++) {
-          console.log("wtf2 ");
               var channl = channels[i];
               var channelCallbackFunc = channl.callbackFunc;
               var channelBox = channl.box;
+              //console.log(channelCallbackFunc);
               var prom = search(channelBox, channelCallbackFunc);
               searches.push(prom);
             }
@@ -135,10 +135,10 @@ if (typeof(chrome) == "undefined") {
             function(c) {
               //console.log("notify", c);
             }).ensure(function(a) {
-              setTimeout(multiplex, 500);
+              setTimeout(multiplex, 1000);
             });
           } else {
-            setTimeout(multiplex, 500);
+            setTimeout(multiplex, 1000);
           }
         })();
 
