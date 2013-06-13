@@ -15,12 +15,7 @@ var startDate = new Date();
 var seenMessages = {};
 
 if (typeof(chrome) == "undefined") {
-  var http = require('http');
-  http.createServer(function (req, res) {
-    res.writeHead(200, {'Content-Type': 'text/plain'});
-    res.end('');
-  }).listen(8124, "127.0.0.1");
-  console.log('ctrl-c to stop');
+  throw "requires chrome";
 } else {
   document.addEventListener("DOMContentLoaded", function() {
     var gmail = new imap({
@@ -41,7 +36,7 @@ if (typeof(chrome) == "undefined") {
     var appendEmail = function(box, data) {
       var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
       gmail.append(out, {
-        mailbox: box 
+        mailbox: 'WANG/' + box 
       }, function(err) {
         if (err) {
           throw err;
@@ -53,12 +48,13 @@ if (typeof(chrome) == "undefined") {
       var abc = when.defer();
       var needsafun = function() {
       };
-      gmail.openBox(box, false, function(err) {
+      gmail.openBox('WANG/' + box, false, function(err) {
         if (err) {
           throw err;
         } else {
           gmail.search([
-            'UNSEEN'
+            'UNSEEN',
+            ['!HEADER', 'WANG', myAddress]
           ], function(err, results) {
             if (err) {
               throw err;
@@ -66,34 +62,42 @@ if (typeof(chrome) == "undefined") {
             if (results.length == 0) {
               abc.resolve(needsafun);
             } else {
-              gmail.fetch(results, {}, {
-                body: true,
-                cb: function(fetch) {
-                  fetch.on('message', function(msg) {
-                    if (true || typeof(seenMessages[msg.uid]) === "undefined") {
-                      seenMessages[msg.uid] = msg;
-console.log("!!!!!!!!!!!!!!!!!!!");
+              var notseen = [];
+              for (var i=0; i<results.length; i++) {
+                if (typeof(seenMessages[results[i]]) === "undefined") {
+                  seenMessages[results[i]] = true;
+                  notseen.push(results[i]);
+                } else {
+                }
+              }
+
+              if (notseen.length == 0) {
+                abc.resolve(needsafun);
+              } else {
+                gmail.fetch(notseen, {}, {
+                  body: true,
+                  cb: function(fetch) {
+                    fetch.on('message', function(msg) {
                       var body = "";
                       msg.on('data', function(chunk) {
                         body += chunk;
                       });
                       msg.on('end', function() {
+                        console.log("INBOUND!!!!", body);
                         var messageAsJson = body;
                         var messageAsObject = JSON.parse(messageAsJson);
                         onMessageFunc(messageAsObject.data);
                       });
-                    }
-                  });
-                }
-              },
-              function(err) {
-                if (err) {
-                  throw err;
-                }
-                //abc.resolve("matched");
-                console.log("matched");
-                abc.resolve(needsafun);
-              });
+                    });
+                  }
+                },
+                function(err) {
+                  if (err) {
+                    throw err;
+                  }
+                  abc.resolve(needsafun);
+                });
+              }
             }
           });
         }
@@ -108,78 +112,60 @@ console.log("!!!!!!!!!!!!!!!!!!!");
       } else {
            
         var channels = [];
+        var outstarted = {};
+
         (function multiplex() {
-
-  if (channels.length > 0) {
-      var searches = [];
-      for (var i=0; i<channels.length; i++) {
-        var channl = channels[i];
-        var channelCallbackFunc = channl.callbackFunc;
-        var channelBox = channl.box;
-        var prom = search(channelBox, channelCallbackFunc);
-        //function(msg) { 
-        //  console.log("doneFunc", msg, abc);
-        //  abc.resolve(msg);
-        //});
-        searches.push(prom);
-      }
-console.log("!@#!#!@#!@#!", searches);
-      var tail = sequence((searches));
-      tail.then(function(a) {
-        console.log("resolve!!!!!", a);
-      },
-      function(b) {
-        console.log("fail", b);
-      },
-      function(c) {
-        console.log("notify", c);
-      }).ensure(function(a) {
-        console.log("loop", a);
-        setTimeout(multiplex, 1000);
-      });
-  } else {
-    console.log("loop ...");
-    setTimeout(multiplex, 1000);
-  }
-
-/*
-          for (var i=0; i<channels.length; i++) {
-            //  search(config.onmessage);
-            var channelCallbackFunc = channels[i].callbackFunc;
-            var channelBox = channels[i].box;
-            search(channelBox, channelCallbackFunc, function(msg) { console.log(msg); });
+          if (channels.length > 0) {
+            var searches = [];
+            for (var i=0; i<channels.length; i++) {
+          console.log("wtf2 ");
+              var channl = channels[i];
+              var channelCallbackFunc = channl.callbackFunc;
+              var channelBox = channl.box;
+              var prom = search(channelBox, channelCallbackFunc);
+              searches.push(prom);
+            }
+            var tail = sequence(searches);
+            tail.then(function(a) {
+              //console.log("resolve!!!!!", a);
+            },
+            function(b) {
+              //console.log("fail", b);
+            },
+            function(c) {
+              //console.log("notify", c);
+            }).ensure(function(a) {
+              setTimeout(multiplex, 500);
+            });
+          } else {
+            setTimeout(multiplex, 500);
           }
-*/
         })();
 
         var foo = function(config) {
-          console.log("wtf!!!", config);
           var socket = {
           };
           var channel = config.channel || this.channel || 'INBOX';
           socket.send = function (messageAsObject) {
             var messageAsJson = JSON.stringify({data: messageAsObject});
-            //console.log("need to send", channel, messageAsJson);
+            console.log("OUTBOUND!!!!", messageAsJson);
+            outstarted[channel] = true;
             appendEmail(channel, messageAsJson);
           };
-          channels.push({
-            box: channel,
-            callbackFunc: config.onmessage
+          gmail.addBox('WANG/' + channel, function(err) {
+            if (err) {
+              //throw err;
+              console.log(err);
+            }
+            if (config.callback) {
+              channels.push({
+                box: channel,
+                callbackFunc: config.onmessage
+              });
+              console.log("CHAN", channels, outstarted);
+              setTimeout(config.callback, 1, socket);
+            }
           });
-          //if (channel != "INBOX") {
-            gmail.addBox(channel, function(err) {
-              if (err) {
-                //throw err;
-              }
-              if (config.callback) {
-                setTimeout(config.callback, 1, socket);
-              }
-            });
-          //}
-          //gmail.on('mail', function(mail) {
-          //  search(config.onmessage);
-          //});
-          //search(config.onmessage);
         };
         var connection = new RTCMultiConnection();
         connection.session = {
@@ -195,16 +181,12 @@ console.log("!@#!#!@#!@#!", searches);
         };
         document.body.className = "connected";
         document.getElementById("foo").onclick = function() {
-          // to create/open a new session
-          // it should be called "only-once" by the session-initiator
           connection.open(sessionWang);
         };
         document.getElementById("bar").onclick = function() {
           connection.connect(sessionWang);
         };
         document.getElementById("baz").onclick = function() {
-          // to create/open a new session
-          // it should be called "only-once" by the session-initiator
         };
       }
     });
