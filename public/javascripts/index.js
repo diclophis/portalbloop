@@ -34,7 +34,6 @@ if (typeof(chrome) == "undefined") {
       connTimeout: 60 * 1000,
       //debug: function(w) { console.log(w); }
     });
-
     var appendEmail = function(box, data) {
       var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nchannel: " + box + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
       gmail.append(out, {
@@ -45,7 +44,6 @@ if (typeof(chrome) == "undefined") {
         }
       });
     };
-
     var search = function() {
       var abc = when.defer();
       var needsafun = function() {
@@ -149,13 +147,11 @@ if (typeof(chrome) == "undefined") {
           console.log("new channel", channel);
           socket.send = function (messageAsObject) {
             var messageAsJson = JSON.stringify({data: messageAsObject});
-            //console.log("outbound on channel", channel);
             appendEmail(channel, messageAsJson);
           };
           gmail.addBox('WANGCHUNG', function(err) {
-            if (err) {
-              //throw err;
-              //console.log(err);
+            if (err && err.code != 'ALREADYEXISTS') {
+              throw err;
             }
             if (config.callback) {
               channels.push({
