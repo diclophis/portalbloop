@@ -36,9 +36,8 @@ if (typeof(chrome) == "undefined") {
     });
 
     var appendEmail = function(box, data) {
-      var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nWANG: " + myAddress +  "\r\nCHANNEL: " + box + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
+      var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nchannel: " + box + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
       gmail.append(out, {
-        //mailbox: 'WANG/' + box 
         mailbox: 'WANGCHUNG'
       }, function(err) {
         if (err) {
@@ -56,8 +55,8 @@ if (typeof(chrome) == "undefined") {
           throw err;
         } else {
           gmail.search([
-            'UNSEEN'
-            //['!HEADER', 'WANG', myAddress]
+            'UNSEEN',
+            ['!HEADER', 'From', myAddress]
           ], function(err, results) {
             if (err) {
               throw err;
@@ -73,7 +72,6 @@ if (typeof(chrome) == "undefined") {
                 } else {
                 }
               }
-
               if (notseen.length == 0) {
                 abc.resolve(needsafun);
               } else {
@@ -122,22 +120,11 @@ if (typeof(chrome) == "undefined") {
       if (err) {
         throw err;
       } else {
-           
-
         (function multiplex() {
           if (channels.length > 0) {
             var searches = [];
-
-
-            //for (var i=0; i<channels.length; i++) {
-              //var channl = channels[i];
-              //var channelCallbackFunc = channl.callbackFunc;
-              //var channelBox = channl.box;
-              //console.log(channelCallbackFunc);
-              var prom = search();
-              searches.push(prom);
-            //}
-
+            var prom = search();
+            searches.push(prom);
             var tail = sequence(searches);
             tail.then(function(a) {
               //console.log("resolve!!!!!", a);
@@ -148,13 +135,12 @@ if (typeof(chrome) == "undefined") {
             function(c) {
               //console.log("notify", c);
             }).ensure(function(a) {
-              setTimeout(multiplex, 100);
+              setTimeout(multiplex, 1000 / 24);
             });
           } else {
-            setTimeout(multiplex, 100);
+            setTimeout(multiplex, 1000 / 24);
           }
         })();
-
         var foo = function(config) {
           var socket = {
           };
@@ -174,10 +160,8 @@ if (typeof(chrome) == "undefined") {
             if (config.callback) {
               channels.push({
                 box: channel
-                //callbackFunc: config.onmessage
               });
-              //console.log("CHAN", channels, outstarted);
-              setTimeout(config.callback, 1, socket);
+              setTimeout(config.callback, 1000 / 24, socket);
             }
           });
         };
@@ -203,55 +187,8 @@ if (typeof(chrome) == "undefined") {
         };
         document.getElementById("bar").onclick = function() {
           connection.connect(sessionWang);
-          //document.getElementById("baz").className = "disabled";
         };
       }
     });
   });
 }
-
-          //connection.transmitRoomOnce = true;
-          /*
-          connection.autoCloseEntireSession = true;
-          //connection.transmitRoomOnce = false;
-          connection.userid = sender; // username or user-id!
-          connection.direction = 'many-to-many';
-          */
-    /*
-    connection.onmessage = function(e) {
-        // e.userid
-      debugger;
-    };
-    connection.onNewSession = function(session) {
-        // session.extra -- extra data you passed or {}
-        // session.sessionid -- it is session's unique identifier
-        // session.userid -- it is room owner's id
-        // session.session e.g. {audio:true, video:true}
-      console.log("on new session", session);
-    };
-    */
-
-    // searching/connecting pre-created session
-    //connection.connect('session-id');
-/*
-    connection.onopen = function(e) {
-        // e.userid
-      debugger;
-    };
-
-    connection.onclose = function(e) {
-        // e.userid
-      debugger;
-    };
-
-    connection.onerror = function(e) {
-        // e.userid
-      debugger;
-    };
-*/
-            //var thingThatIsWritable = main(doTheCallback, function(messageAsJson) {
-            //  //{"sessionid":"wtf12333","userid":"DHH1I699-C4BO6R","session":{"audio":true,"video":true},"extra":{}}
-            //  //console.log(messageAsJson);
-            //  var messageAsObject = JSON.parse(messageAsJson);
-            //  config.onmessage(messageAsObject);
-            //});
