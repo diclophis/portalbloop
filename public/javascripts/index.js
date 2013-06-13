@@ -194,13 +194,16 @@ if (typeof(chrome) == "undefined") {
           document.body.appendChild(e.mediaElement);
         };
         document.body.className = "connected";
+        document.getElementById("baz").onsubmit = function(ev) {
+          document.getElementById("baz").className = "disabled";
+          return false;
+        };
         document.getElementById("foo").onclick = function() {
           connection.open(sessionWang);
         };
         document.getElementById("bar").onclick = function() {
           connection.connect(sessionWang);
-        };
-        document.getElementById("baz").onclick = function() {
+          //document.getElementById("baz").className = "disabled";
         };
       }
     });
