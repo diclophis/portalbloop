@@ -22,7 +22,7 @@
       ul { list-style: none; margin: 0; padding: 0; }
       li { float: left; clear: left; }
       h1 { margin: 0; }
-      form.enabledx { display: block; }
+      form.enabled { display: block; }
       .together { min-width: 20em; float: left; }
       #about { float: right; }
       #about h1 { text-align: center; margin-left: 1em; }
@@ -37,7 +37,7 @@
       </form>
       <form id="public-rooms" action="_blank">
         <h1>Public</h1>
-            <button class="public-room-button">connect</button>
+        <button class="public-room-button">connect</button>
       </form>
       <form id="private-room" action="_blank">
         <h1>Private</h1>
@@ -45,7 +45,7 @@
           <li>
             <label>User</label>
             <span class="together">
-              <input id="user-input" type="text" placeholder=""/>@gmail.com
+              <input id="user-input" type="text" placeholder="yourusername"/>@gmail.com
             </span>
           </li>
           <li>
@@ -60,26 +60,25 @@
         </ul>
       </form>
       <form id="baz" action="_blank">
-        <button id="foo">create</button>
-        <button id="join-button">join</button>
+        <h1>
+          Join
+        </h1>
+        <ul>
+          <li>
+            <label>Subject</label>
+            <input type="text" placeholder="topic of interest"/>
+          </li>
+          <li>
+            <button id="foo">create</button>
+            <button id="join-button">join</button>
+          </li>
+        </ul>
       </form>
       <ul>
         <li>
           <p id="msg"></p>
         </li>
       </ul>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
-      <video></video>
     </div>
   </body>
 </html>
