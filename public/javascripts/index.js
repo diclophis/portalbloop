@@ -6,6 +6,7 @@ var imap = require('imap');
 var when = require('when');
 var sequence = require('when/sequence');
 var secret = require('./secret');
+var signalMailbox = 'BLOOP_SIGNAL';
 
 var sessionWang = "wtf12333";
 var sender = Math.round(Math.random() * 60535) + 5000;
@@ -35,7 +36,7 @@ if (typeof(chrome) == "undefined") {
       //debug: function(w) { console.log(w); }
     });
     var appendEmail = function(box, data) {
-      var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nchannel: " + box + "\r\nSubject: " + sessionWang + "\r\n\r\n" + data + "\r\n";
+      var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + box + "\r\n\r\n" + data + "\r\n";
       gmail.append(out, {
         mailbox: 'WANGCHUNG'
       }, function(err) {
@@ -75,7 +76,7 @@ if (typeof(chrome) == "undefined") {
               } else {
                 gmail.fetch(notseen, {}, {
                   body: true,
-                  headers: 'CHANNEL',
+                  headers: 'Subject',
                   cb: function(fetch) {
                     fetch.on('message', function(msg) {
                       var body = "";
@@ -84,8 +85,8 @@ if (typeof(chrome) == "undefined") {
                         body += chunk;
                       });
                       msg.on('headers', function(headers) {
-                        //console.log(headers);
-                        thingy = headers.channel[0];
+                        console.log(headers);
+                        thingy = headers.subject[0];
                       });
                       msg.on('end', function() {
                         //console.log("inbound on channel", thingy);
