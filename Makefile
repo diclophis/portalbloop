@@ -1,6 +1,8 @@
 # OSX Makefile
 
-build: public/javascripts/node.js
+build: public/app.zip
+
+public/app.zip: public/javascripts/node.js
 	touch public/app.zip && rm public/app.zip && zip -r public/app.zip public/*
 
 public/javascripts/node.js: public/javascripts/index.js public/javascripts/secret.js node_modules/**/*
