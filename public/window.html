@@ -5,37 +5,43 @@
     <script src="javascripts/node.js"></script>
     <script src="javascripts/RTCMultiConnection-v1.3.js"></script>
     <style>
-      html, body { width: 100%; height: 100%; padding: 0; margin: 0; font-size: 1em; }
-      body { width: 98%; height: 98%; margin: 1%; }
+      html, body { width: 100%; height: 100%; padding: 0; margin: 0; font-size: 1em; overflow: scroll; }
       form { display: none; margin: 0.5em; }
       video { margin: 1%; width: 33%; }
       button { padding: 0; margin: 1em; width: 9em; height: 3em; }
       input { padding: 0; margin: 0; width: 8em; height: 2em; font-size: 1em; padding: 0 0.5em 0 0.5em; margin: 0.5em; }
       label { margin: 0.5em; padding: 0.5em 0 0 0; width: 5em; float: left; }
       ul { list-style: none; margin: 0; padding: 0; }
+      li { float: left; clear: left; }
+      h1 { margin-bottom: 0; }
       form.enabled { display: block; }
-      #about { float: right; width: 10em; height: 10em; border: 2px solid red; }
-      #about h1 { text-align: center; }
+      .together { min-width: 20em; float: left; }
+      #about { float: right; border: 2px solid red; }
+      #about h1 { text-align: center; margin: 0; }
     </style>
   </head>
   <body>
     <form id="about" class="enabled" action="_blank">
-      <h1>Portal Bloop</h1>
+      <h1>Bloop</h1>
     </form>
     <form id="public-rooms" action="_blank">
       <h1>Public</h1>
-      <button class="public-room-button">connect</button>
+          <button class="public-room-button">connect</button>
     </form>
     <form id="private-room" action="_blank">
       <h1>Private</h1>
       <ul>
         <li>
           <label>User</label>
-          <input id="user-input" type="text" placeholder=""/>@gmail.com
+          <span class="together">
+            <input id="user-input" type="text" placeholder=""/>@gmail.com
+          </span>
         </li>
         <li>
           <label>Password</label>
-          <input id="pass-input" type="password"/>
+          <span class="together">
+            <input id="pass-input" type="password"/>
+          </span>
         </li>
         <li>
           <button id="bar">connect</button>
