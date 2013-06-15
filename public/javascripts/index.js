@@ -195,6 +195,12 @@ if (typeof(chrome) == "undefined") {
       });
     };
 
+    var hideIndexForms = function() {
+      document.getElementById("about").className = "";
+      document.getElementById("public-rooms").className = "";
+      document.getElementById("private-room").className = "";
+    };
+
     document.getElementById("about").className = "enabled";
 
     chrome.storage.sync.get(function(defaults) {
@@ -205,20 +211,12 @@ if (typeof(chrome) == "undefined") {
     });
 
     document.getElementById("public-rooms").onsubmit = function(ev) {
-
-      document.getElementById("about").className = "";
-      document.getElementById("public-rooms").className = "";
-      document.getElementById("private-room").className = "";
-
+      hideIndexForms();
       connectToImapServer(publicSecret);
       return false;
     }
     document.getElementById("private-room").onsubmit = function(ev) {
-
-      document.getElementById("about").className = "";
-      document.getElementById("public-rooms").className = "";
-      document.getElementById("private-room").className = "";
-
+      hideIndexForms();
       var user = document.getElementById("user-input").value;
       var pass = document.getElementById("pass-input").value;
       chrome.storage.sync.set({user: user});
