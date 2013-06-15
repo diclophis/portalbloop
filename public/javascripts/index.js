@@ -176,21 +176,27 @@ if (typeof(chrome) == "undefined") {
         var messageAsJson = JSON.stringify({data: messageAsObject});
         appendEmail(channel, messageAsJson);
       };
-      gmail.openBox('WANGCHUNG', false, function(err) {
-        if (err) {
-          throw err;
-        } else {
-          if (config.callback) {
-            setTimeout(function() {
-              channels.push({
-                box: channel
-              });
-              multiplex();
-              config.callback(socket);
-            }, 1000 / 24);
+      if (channels.length == 0) {
+        gmail.openBox('WANGCHUNG', false, function(err) {
+          if (err) {
+            throw err;
+          } else {
+            if (config.callback) {
+              setTimeout(function() {
+                channels.push({
+                  box: channel
+                });
+                multiplex();
+                config.callback(socket);
+              }, 1000 / 24);
+            }
           }
-        }
-      });
+        });
+      } else {
+        setTimeout(function() {
+          config.callback(socket);
+        }, 1000 / 24);
+      }
     };
 
       gmail.connect(function(err) {
@@ -219,6 +225,7 @@ if (typeof(chrome) == "undefined") {
             connection.onstream = function (e) {
               console.log("clearing");
               clearTimeout(broadcastTimeout);
+              document.getElementById("retry-form").className = "";
               document.getElementById("content").appendChild(e.mediaElement);
               resizeVideos();
             };
@@ -227,23 +234,9 @@ if (typeof(chrome) == "undefined") {
               console.log("retry");
               document.getElementById("retry-form").className = "";
               connection.open(sanitizeSessionWang(sessionWang));
-
-              return;
-              /*
-              clearTimeout(multiplexTimeout);
-              channels = [];
-              //connection.open(sanitizeSessionWang(sessionWang));
-              connection.close();
-              gmail.delBox('WANGCHUNG/' + sanitizedSession, function(err) {
-                if (err) {
-                  console.log(err);
-                }
-                console.log("old del");
-                openOrConnectToSession(sanitizeSessionWang(sanitizedSession));
-              });
-              */
             };
 
+            /*
             document.getElementById("retry-form").onsubmit = function(ev) {
               document.getElementById("retry-form").className = "";
               return false;
@@ -251,20 +244,22 @@ if (typeof(chrome) == "undefined") {
             document.getElementById("retry-button").onclick = function(ev) {
               retry();
             };
+            */
 
-            retryFormTimeout = setTimeout(function() {
-              document.getElementById("retry-form").className = "enabled";
-            }, 1000);
-console.log("mkdir", sanitizedSession);
+            //retryFormTimeout = setTimeout(function() {
+            //  document.getElementById("retry-form").className = "enabled";
+            //}, 1000);
+            //console.log("mkdir", sanitizedSession);
+
             gmail.addBox('WANGCHUNG/' + sanitizedSession, function(err) {
               if (err && err.code != 'ALREADYEXISTS') {
                 throw err;
               } else if (err) {
                 console.log("joining!!!");
                 connection.connect(sanitizeSessionWang(sessionWang));
-                //broadcastTimeout = setTimeout(function() {
-                //  retry();
-                //}, (2 * 60 * 1000) + (Math.random() * 5000));
+                broadcastTimeout = setTimeout(function() {
+                  retry();
+                }, (5 * 1000) + (Math.random() * 10000));
               } else {
                 console.log("opening!!!");
                 connection.open(sanitizeSessionWang(sessionWang));
