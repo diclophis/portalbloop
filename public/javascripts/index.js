@@ -12,7 +12,7 @@ var sessionWang = "wtf12333";
 var sender = Math.round(Math.random() * 60535) + 5000;
 var myAddress = secret.user + '+' + sender + '@gmail.com';
 var toAddress = secret.user + '@gmail.com';
-var startDate = new Date();
+var startDate = Date.now();
 var seenMessages = {};
 var channels = [];
 var outstarted = {};
@@ -21,8 +21,6 @@ if (typeof(chrome) == "undefined") {
   throw "requires chrome";
 } else {
   document.addEventListener("DOMContentLoaded", function() {
-
-
     var gmail = new imap({
       user: secret.user,
       password: secret.pass,
@@ -38,7 +36,7 @@ if (typeof(chrome) == "undefined") {
       //debug: function(w) { console.log(w); }
     });
     var appendEmail = function(box, data) {
-      var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + box + "\r\n\r\n" + data + "\r\n";
+      var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + box + "\r\nDate: " + new Date() + "\r\n\r\n" + data + "\r\n";
       gmail.append(out, {
         mailbox: 'WANGCHUNG'
       }, function(err) {
@@ -78,25 +76,28 @@ if (typeof(chrome) == "undefined") {
               } else {
                 gmail.fetch(notseen, {}, {
                   body: true,
-                  headers: 'Subject',
+                  headers: ['Date', 'Subject'],
                   cb: function(fetch) {
                     fetch.on('message', function(msg) {
                       var body = "";
-                      var thingy = null;
+                      var headers = null;
                       msg.on('data', function(chunk) {
                         body += chunk;
                       });
-                      msg.on('headers', function(headers) {
-                        console.log(headers);
-                        thingy = headers.subject[0];
+                      msg.on('headers', function(hdrs) {
+                        headers = hdrs; //.subject[0];
                       });
                       msg.on('end', function() {
                         //console.log("inbound on channel", thingy);
-                        var messageAsJson = body;
-                        var messageAsObject = JSON.parse(messageAsJson);
-                        //console.log(outstarted);
-                        if (outstarted[thingy]) {
-                          outstarted[thingy](messageAsObject.data);
+                        var date = headers['date'] ? headers.date[0] : '01/01/01';
+                        var thingy = headers.subject[0];
+                        if (startDate < Date.parse(date)) {
+                          var messageAsJson = body;
+                          var messageAsObject = JSON.parse(messageAsJson);
+                          //console.log(outstarted);
+                          if (outstarted[thingy]) {
+                            outstarted[thingy](messageAsObject.data);
+                          }
                         }
                       });
                     });
@@ -163,7 +164,6 @@ if (typeof(chrome) == "undefined") {
           };
 
     var connectToImapServer = function() {
-    debugger;
       gmail.connect(function(err) {
         if (err) {
           throw err;
@@ -188,7 +188,7 @@ if (typeof(chrome) == "undefined") {
           document.getElementById("foo").onclick = function() {
             connection.open(sessionWang);
           };
-          document.getElementById("bar").onclick = function() {
+          document.getElementById("join-button").onclick = function() {
             connection.connect(sessionWang);
           };
         }
@@ -197,14 +197,21 @@ if (typeof(chrome) == "undefined") {
 
     document.getElementById("about").className = "enabled";
 
-    document.getElementById("public-rooms").className = "enabled";
     document.getElementById("public-rooms").onsubmit = function(ev) {
-      debugger;
+      document.getElementById("about").className = "";
+      document.getElementById("public-rooms").className = "";
+      document.getElementById("private-room").className = "";
+      connectToImapServer();
+      return false;
     }
-    document.getElementById("private-room").className = "enabled";
     document.getElementById("private-room").onsubmit = function(ev) {
       debugger;
     }
+
+    setTimeout(function() {
+      document.getElementById("public-rooms").className = "enabled";
+      document.getElementById("private-room").className = "enabled";
+    }, (1000 / 24) * 10);
 
   });
 }
