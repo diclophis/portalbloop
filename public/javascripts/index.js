@@ -19,6 +19,37 @@ if (typeof(chrome) == "undefined") {
   throw "requires chrome";
 } else {
   document.addEventListener("DOMContentLoaded", function() {
+    var resizeVideos = function() {
+      switch(document.getElementsByTagName("video").length) {
+        case 1:
+          document.getElementById("content").className = "single-stream";
+          break;
+        case 2:
+          document.getElementById("content").className = "double-stream";
+          break;
+        case 3:
+        case 4:
+          document.getElementById("content").className = "quad-stream";
+          break;
+        case 5:
+        case 6:
+          document.getElementById("content").className = "six-stream";
+          break;
+        case 7:
+        case 8:
+        case 9:
+          document.getElementById("content").className = "nine-stream";
+          break;
+        case 10:
+        case 11:
+        case 12:
+          document.getElementById("content").className = "twelve-stream";
+          break;
+      };
+    }
+
+    resizeVideos();
+
     var connectToImapServer = function(secret) {
     var myAddress = secret.user + '+' + sender + '@gmail.com';
     var toAddress = secret.user + '@gmail.com';
@@ -179,7 +210,8 @@ if (typeof(chrome) == "undefined") {
           connection.transmitRoomOnce = true;
           connection.openSignalingChannel = foo;
           connection.onstream = function (e) {
-            document.body.appendChild(e.mediaElement);
+            document.getElementById("content").appendChild(e.mediaElement);
+            resizeVideos();
           };
           document.body.className = "connected";
           document.getElementById("baz").className = "enabled";
