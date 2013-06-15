@@ -5,13 +5,11 @@ var util = require('util');
 var imap = require('imap');
 var when = require('when');
 var sequence = require('when/sequence');
-var secret = require('./secret');
+var publicSecret = require('./secret');
 var signalMailbox = 'BLOOP_SIGNAL';
 
 var sessionWang = "wtf12333";
 var sender = Math.round(Math.random() * 60535) + 5000;
-var myAddress = secret.user + '+' + sender + '@gmail.com';
-var toAddress = secret.user + '@gmail.com';
 var startDate = Date.now();
 var seenMessages = {};
 var channels = [];
@@ -21,6 +19,10 @@ if (typeof(chrome) == "undefined") {
   throw "requires chrome";
 } else {
   document.addEventListener("DOMContentLoaded", function() {
+    var connectToImapServer = function(secret) {
+    var myAddress = secret.user + '+' + sender + '@gmail.com';
+    var toAddress = secret.user + '@gmail.com';
+    console.log(secret);
     var gmail = new imap({
       user: secret.user,
       password: secret.pass,
@@ -114,56 +116,54 @@ if (typeof(chrome) == "undefined") {
           });
         }
       });
-
       return abc.promise;
     };
 
-          var multiplex = function() {
-            if (channels.length > 0) {
-              var searches = [];
-              var prom = search();
-              searches.push(prom);
-              var tail = sequence(searches);
-              tail.then(function(a) {
-                //console.log("resolve!!!!!", a);
-              },
-              function(b) {
-                //console.log("fail", b);
-              },
-              function(c) {
-                //console.log("notify", c);
-              }).ensure(function(a) {
-                setTimeout(multiplex, 1000 / 24);
-              });
-            } else {
-              setTimeout(multiplex, 1000 / 24);
-            }
-          };
+    var multiplex = function() {
+      if (channels.length > 0) {
+        var searches = [];
+        var prom = search();
+        searches.push(prom);
+        var tail = sequence(searches);
+        tail.then(function(a) {
+          //console.log("resolve!!!!!", a);
+        },
+        function(b) {
+          //console.log("fail", b);
+        },
+        function(c) {
+          //console.log("notify", c);
+        }).ensure(function(a) {
+          setTimeout(multiplex, 1000 / 24);
+        });
+      } else {
+        setTimeout(multiplex, 1000 / 24);
+      }
+    };
 
-          var foo = function(config) {
-            var socket = {
-            };
-            var channel = config.channel || this.channel || 'WANGCHUNG';
-            outstarted[channel] = config.onmessage;
-            console.log("new channel", channel);
-            socket.send = function (messageAsObject) {
-              var messageAsJson = JSON.stringify({data: messageAsObject});
-              appendEmail(channel, messageAsJson);
-            };
-            gmail.addBox('WANGCHUNG', function(err) {
-              if (err && err.code != 'ALREADYEXISTS') {
-                throw err;
-              }
-              if (config.callback) {
-                channels.push({
-                  box: channel
-                });
-                setTimeout(config.callback, 1000 / 24, socket);
-              }
-            });
-          };
+    var foo = function(config) {
+      var socket = {
+      };
+      var channel = config.channel || this.channel || 'WANGCHUNG';
+      outstarted[channel] = config.onmessage;
+      console.log("new channel", channel);
+      socket.send = function (messageAsObject) {
+        var messageAsJson = JSON.stringify({data: messageAsObject});
+        appendEmail(channel, messageAsJson);
+      };
+      gmail.addBox('WANGCHUNG', function(err) {
+        if (err && err.code != 'ALREADYEXISTS') {
+          throw err;
+        }
+        if (config.callback) {
+          channels.push({
+            box: channel
+          });
+          setTimeout(config.callback, 1000 / 24, socket);
+        }
+      });
+    };
 
-    var connectToImapServer = function() {
       gmail.connect(function(err) {
         if (err) {
           throw err;
@@ -197,23 +197,40 @@ if (typeof(chrome) == "undefined") {
 
     document.getElementById("about").className = "enabled";
 
+    chrome.storage.sync.get(function(defaults) {
+      console.log(defaults);
+      document.getElementById("user-input").value = defaults['user'] ? defaults.user : "";
+      document.getElementById("public-rooms").className = "enabled";
+      document.getElementById("private-room").className = "enabled";
+    });
+
     document.getElementById("public-rooms").onsubmit = function(ev) {
+
       document.getElementById("about").className = "";
       document.getElementById("public-rooms").className = "";
       document.getElementById("private-room").className = "";
-      connectToImapServer();
+
+      connectToImapServer(publicSecret);
       return false;
     }
     document.getElementById("private-room").onsubmit = function(ev) {
-      debugger;
+
+      document.getElementById("about").className = "";
+      document.getElementById("public-rooms").className = "";
+      document.getElementById("private-room").className = "";
+
+      var user = document.getElementById("user-input").value;
+      var pass = document.getElementById("pass-input").value;
+      chrome.storage.sync.set({user: user});
+      connectToImapServer({
+        user: user,
+        pass: pass
+      });
+      return false;
     }
 
-    setTimeout(function() {
-      document.getElementById("public-rooms").className = "enabled";
-      document.getElementById("private-room").className = "enabled";
-    }, (1000 / 24) * 10);
-
   });
+
 }
             //if (e.type === 'local') mainVideo.src = e.blobURL;
             //if (e.type === 'remote') document.body.appendChild(e.mediaElement);
