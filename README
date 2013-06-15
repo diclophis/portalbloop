@@ -7,3 +7,9 @@ var secret = module.exports;
 
 secret.user = "";
 secret.pass = "";
+
+
+addBox is aquireLock
+
+if lockAquired
+  open

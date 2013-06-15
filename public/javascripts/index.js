@@ -8,12 +8,14 @@ var sequence = require('when/sequence');
 var publicSecret = require('./secret');
 var signalMailbox = 'BLOOP_SIGNAL';
 
-var sessionWang = "wtf12333";
+var sessionWang = "wtf123333";
 var sender = Math.round(Math.random() * 60535) + 5000;
 var startDate = Date.now();
 var seenMessages = {};
 var channels = [];
 var outstarted = {};
+var broadcastTimeout = null;
+var multiplexTimeout = null;
 
 if (typeof(chrome) == "undefined") {
   throw "requires chrome";
@@ -53,7 +55,6 @@ if (typeof(chrome) == "undefined") {
     var connectToImapServer = function(secret) {
     var myAddress = secret.user + '+' + sender + '@gmail.com';
     var toAddress = secret.user + '@gmail.com';
-    console.log(secret);
     var gmail = new imap({
       user: secret.user,
       password: secret.pass,
@@ -70,6 +71,7 @@ if (typeof(chrome) == "undefined") {
     });
     var appendEmail = function(box, data) {
       var out = "From: " + myAddress + "\r\nTo: " + toAddress + "\r\nSubject: " + box + "\r\nDate: " + new Date() + "\r\n\r\n" + data + "\r\n";
+      console.log("out");
       gmail.append(out, {
         mailbox: 'WANGCHUNG'
       }, function(err) {
@@ -80,73 +82,65 @@ if (typeof(chrome) == "undefined") {
     };
     var search = function() {
       var abc = when.defer();
-      var needsafun = function() {
-      };
-      gmail.openBox('WANGCHUNG', false, function(err) {
+      var needsafun = function() {};
+      gmail.search(['UNSEEN', ['!HEADER', 'From', myAddress]], function(err, results) {
         if (err) {
+          debugger;
           throw err;
+        }
+        if (results.length == 0) {
+          abc.resolve(needsafun);
         } else {
-          gmail.search([
-            'UNSEEN',
-            ['!HEADER', 'From', myAddress]
-          ], function(err, results) {
-            if (err) {
-              throw err;
-            }
-            if (results.length == 0) {
-              abc.resolve(needsafun);
+          var notseen = [];
+          for (var i=0; i<results.length; i++) {
+            if (typeof(seenMessages[results[i]]) === "undefined") {
+              seenMessages[results[i]] = true;
+              notseen.push(results[i]);
             } else {
-              var notseen = [];
-              for (var i=0; i<results.length; i++) {
-                if (typeof(seenMessages[results[i]]) === "undefined") {
-                  seenMessages[results[i]] = true;
-                  notseen.push(results[i]);
-                } else {
-                }
-              }
-              if (notseen.length == 0) {
-                abc.resolve(needsafun);
-              } else {
-                gmail.fetch(notseen, {}, {
-                  body: true,
-                  headers: ['Date', 'Subject'],
-                  cb: function(fetch) {
-                    fetch.on('message', function(msg) {
-                      var body = "";
-                      var headers = null;
-                      msg.on('data', function(chunk) {
-                        body += chunk;
-                      });
-                      msg.on('headers', function(hdrs) {
-                        headers = hdrs; //.subject[0];
-                      });
-                      msg.on('end', function() {
-                        //console.log("inbound on channel", thingy);
-                        var date = headers['date'] ? headers.date[0] : '01/01/01';
-                        var thingy = headers.subject[0];
-                        if (startDate < Date.parse(date)) {
-                          var messageAsJson = body;
-                          var messageAsObject = JSON.parse(messageAsJson);
-                          //console.log(outstarted);
-                          if (outstarted[thingy]) {
-                            outstarted[thingy](messageAsObject.data);
-                          }
-                        }
-                      });
-                    });
-                  }
-                },
-                function(err) {
-                  if (err) {
-                    throw err;
-                  }
-                  abc.resolve(needsafun);
+            }
+          }
+          if (notseen.length == 0) {
+            abc.resolve(needsafun);
+          } else {
+            gmail.fetch(notseen, {}, {
+              body: true,
+              headers: ['Date', 'Subject'],
+              cb: function(fetch) {
+                fetch.on('message', function(msg) {
+                  var body = "";
+                  var headers = null;
+                  msg.on('data', function(chunk) {
+                    body += chunk;
+                  });
+                  msg.on('headers', function(hdrs) {
+                    headers = hdrs; //.subject[0];
+                  });
+                  msg.on('end', function() {
+                    //console.log("inbound on channel", thingy);
+                    var date = headers['date'] ? headers.date[0] : '01/01/01';
+                    var thingy = headers.subject[0];
+                    if (startDate < Date.parse(date)) {
+                      var messageAsJson = body;
+                      var messageAsObject = JSON.parse(messageAsJson);
+                      //console.log(outstarted);
+                      if (outstarted[thingy]) {
+                        outstarted[thingy](messageAsObject.data);
+                      }
+                    }
+                  });
                 });
               }
-            }
-          });
+            },
+            function(err) {
+              if (err) {
+                throw err;
+              }
+              abc.resolve(needsafun);
+            });
+          }
         }
       });
+
       return abc.promise;
     };
 
@@ -165,10 +159,10 @@ if (typeof(chrome) == "undefined") {
         function(c) {
           //console.log("notify", c);
         }).ensure(function(a) {
-          setTimeout(multiplex, 1000 / 24);
+          multiplexTimeout = setTimeout(multiplex, 1000 / 24);
         });
       } else {
-        setTimeout(multiplex, 1000 / 24);
+        multiplexTimeout = setTimeout(multiplex, 1000 / 24);
       }
     };
 
@@ -182,15 +176,19 @@ if (typeof(chrome) == "undefined") {
         var messageAsJson = JSON.stringify({data: messageAsObject});
         appendEmail(channel, messageAsJson);
       };
-      gmail.addBox('WANGCHUNG', function(err) {
-        if (err && err.code != 'ALREADYEXISTS') {
+      gmail.openBox('WANGCHUNG', false, function(err) {
+        if (err) {
           throw err;
-        }
-        if (config.callback) {
-          channels.push({
-            box: channel
-          });
-          setTimeout(config.callback, 1000 / 24, socket);
+        } else {
+          if (config.callback) {
+            setTimeout(function() {
+              channels.push({
+                box: channel
+              });
+              multiplex();
+              config.callback(socket);
+            }, 1000 / 24);
+          }
         }
       });
     };
@@ -201,29 +199,80 @@ if (typeof(chrome) == "undefined") {
           showIndex(err.toString());
           throw err;
         } else {
-          multiplex();
-          var connection = new RTCMultiConnection();
-          connection.session = {
-            audio: true,
-            video: true
-          };
-          connection.transmitRoomOnce = true;
-          connection.openSignalingChannel = foo;
-          connection.onstream = function (e) {
-            document.getElementById("content").appendChild(e.mediaElement);
-            resizeVideos();
-          };
           document.body.className = "connected";
           document.getElementById("baz").className = "enabled";
           document.getElementById("baz").onsubmit = function(ev) {
             document.getElementById("baz").className = "";
             return false;
           };
-          document.getElementById("foo").onclick = function() {
-            connection.open(sessionWang);
+          var sanitizeSessionWang = function(userEnteredValue) {
+            return userEnteredValue.replace(/[^a-zA-Z0-9\-\_\.]/, '');
+          };
+          var openOrConnectToSession = function(sanitizedSession) {
+            var connection = new RTCMultiConnection();
+            connection.session = {
+              audio: true,
+              video: true
+            };
+            connection.transmitRoomOnce = true;
+            connection.openSignalingChannel = foo;
+            connection.onstream = function (e) {
+              console.log("clearing");
+              clearTimeout(broadcastTimeout);
+              document.getElementById("content").appendChild(e.mediaElement);
+              resizeVideos();
+            };
+
+            var retry = function() {
+              console.log("retry");
+              document.getElementById("retry-form").className = "";
+              connection.open(sanitizeSessionWang(sessionWang));
+
+              return;
+              /*
+              clearTimeout(multiplexTimeout);
+              channels = [];
+              //connection.open(sanitizeSessionWang(sessionWang));
+              connection.close();
+              gmail.delBox('WANGCHUNG/' + sanitizedSession, function(err) {
+                if (err) {
+                  console.log(err);
+                }
+                console.log("old del");
+                openOrConnectToSession(sanitizeSessionWang(sanitizedSession));
+              });
+              */
+            };
+
+            document.getElementById("retry-form").onsubmit = function(ev) {
+              document.getElementById("retry-form").className = "";
+              return false;
+            };
+            document.getElementById("retry-button").onclick = function(ev) {
+              retry();
+            };
+
+            retryFormTimeout = setTimeout(function() {
+              document.getElementById("retry-form").className = "enabled";
+            }, 1000);
+console.log("mkdir", sanitizedSession);
+            gmail.addBox('WANGCHUNG/' + sanitizedSession, function(err) {
+              if (err && err.code != 'ALREADYEXISTS') {
+                throw err;
+              } else if (err) {
+                console.log("joining!!!");
+                connection.connect(sanitizeSessionWang(sessionWang));
+                //broadcastTimeout = setTimeout(function() {
+                //  retry();
+                //}, (2 * 60 * 1000) + (Math.random() * 5000));
+              } else {
+                console.log("opening!!!");
+                connection.open(sanitizeSessionWang(sessionWang));
+              }
+            });
           };
           document.getElementById("join-button").onclick = function() {
-            connection.connect(sessionWang);
+            openOrConnectToSession(sanitizeSessionWang(sessionWang));
           };
         }
       });
@@ -240,7 +289,6 @@ if (typeof(chrome) == "undefined") {
       document.getElementById("about").className = "enabled";
 
       chrome.storage.sync.get(function(defaults) {
-        console.log(defaults);
         document.getElementById("user-input").value = defaults['user'] ? defaults.user : "";
         document.getElementById("public-rooms").className = "enabled";
         document.getElementById("private-room").className = "enabled";
@@ -272,3 +320,10 @@ if (typeof(chrome) == "undefined") {
 }
             //if (e.type === 'local') mainVideo.src = e.blobURL;
             //if (e.type === 'remote') document.body.appendChild(e.mediaElement);
+          // first person
+          //   new channel wtf12333
+          //   idles ... waits for ??? (new sidechannels)
+          //   opens sidechannel for new guest
+          // second person
+          //   new channel wtf12333
+          //   new channel GX71UN17-C4BO6R 
