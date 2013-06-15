@@ -21,6 +21,8 @@ if (typeof(chrome) == "undefined") {
   throw "requires chrome";
 } else {
   document.addEventListener("DOMContentLoaded", function() {
+
+
     var gmail = new imap({
       user: secret.user,
       password: secret.pass,
@@ -115,77 +117,96 @@ if (typeof(chrome) == "undefined") {
       return abc.promise;
     };
 
-    gmail.connect(function(err) {
-      if (err) {
-        throw err;
-      } else {
-        (function multiplex() {
-          if (channels.length > 0) {
-            var searches = [];
-            var prom = search();
-            searches.push(prom);
-            var tail = sequence(searches);
-            tail.then(function(a) {
-              //console.log("resolve!!!!!", a);
-            },
-            function(b) {
-              //console.log("fail", b);
-            },
-            function(c) {
-              //console.log("notify", c);
-            }).ensure(function(a) {
-              setTimeout(multiplex, 1000 / 24);
-            });
-          } else {
-            setTimeout(multiplex, 1000 / 24);
-          }
-        })();
-        var foo = function(config) {
-          var socket = {
-          };
-          var channel = config.channel || this.channel || 'WANGCHUNG';
-          outstarted[channel] = config.onmessage;
-          console.log("new channel", channel);
-          socket.send = function (messageAsObject) {
-            var messageAsJson = JSON.stringify({data: messageAsObject});
-            appendEmail(channel, messageAsJson);
-          };
-          gmail.addBox('WANGCHUNG', function(err) {
-            if (err && err.code != 'ALREADYEXISTS') {
-              throw err;
-            }
-            if (config.callback) {
-              channels.push({
-                box: channel
+          var multiplex = function() {
+            if (channels.length > 0) {
+              var searches = [];
+              var prom = search();
+              searches.push(prom);
+              var tail = sequence(searches);
+              tail.then(function(a) {
+                //console.log("resolve!!!!!", a);
+              },
+              function(b) {
+                //console.log("fail", b);
+              },
+              function(c) {
+                //console.log("notify", c);
+              }).ensure(function(a) {
+                setTimeout(multiplex, 1000 / 24);
               });
-              setTimeout(config.callback, 1000 / 24, socket);
+            } else {
+              setTimeout(multiplex, 1000 / 24);
             }
-          });
-        };
-        var connection = new RTCMultiConnection();
-        connection.session = {
-          audio: true,
-          video: true
-        };
-        connection.transmitRoomOnce = true;
-        connection.openSignalingChannel = foo;
-        connection.onstream = function (e) {
-          //if (e.type === 'local') mainVideo.src = e.blobURL;
-          //if (e.type === 'remote') document.body.appendChild(e.mediaElement);
-          document.body.appendChild(e.mediaElement);
-        };
-        document.body.className = "connected";
-        document.getElementById("baz").onsubmit = function(ev) {
-          document.getElementById("baz").className = "disabled";
-          return false;
-        };
-        document.getElementById("foo").onclick = function() {
-          connection.open(sessionWang);
-        };
-        document.getElementById("bar").onclick = function() {
-          connection.connect(sessionWang);
-        };
-      }
-    });
+          };
+
+          var foo = function(config) {
+            var socket = {
+            };
+            var channel = config.channel || this.channel || 'WANGCHUNG';
+            outstarted[channel] = config.onmessage;
+            console.log("new channel", channel);
+            socket.send = function (messageAsObject) {
+              var messageAsJson = JSON.stringify({data: messageAsObject});
+              appendEmail(channel, messageAsJson);
+            };
+            gmail.addBox('WANGCHUNG', function(err) {
+              if (err && err.code != 'ALREADYEXISTS') {
+                throw err;
+              }
+              if (config.callback) {
+                channels.push({
+                  box: channel
+                });
+                setTimeout(config.callback, 1000 / 24, socket);
+              }
+            });
+          };
+
+    var connectToImapServer = function() {
+    debugger;
+      gmail.connect(function(err) {
+        if (err) {
+          throw err;
+        } else {
+          multiplex();
+          var connection = new RTCMultiConnection();
+          connection.session = {
+            audio: true,
+            video: true
+          };
+          connection.transmitRoomOnce = true;
+          connection.openSignalingChannel = foo;
+          connection.onstream = function (e) {
+            document.body.appendChild(e.mediaElement);
+          };
+          document.body.className = "connected";
+          document.getElementById("baz").className = "enabled";
+          document.getElementById("baz").onsubmit = function(ev) {
+            document.getElementById("baz").className = "";
+            return false;
+          };
+          document.getElementById("foo").onclick = function() {
+            connection.open(sessionWang);
+          };
+          document.getElementById("bar").onclick = function() {
+            connection.connect(sessionWang);
+          };
+        }
+      });
+    };
+
+    document.getElementById("about").className = "enabled";
+
+    document.getElementById("public-rooms").className = "enabled";
+    document.getElementById("public-rooms").onsubmit = function(ev) {
+      debugger;
+    }
+    document.getElementById("private-room").className = "enabled";
+    document.getElementById("private-room").onsubmit = function(ev) {
+      debugger;
+    }
+
   });
 }
+            //if (e.type === 'local') mainVideo.src = e.blobURL;
+            //if (e.type === 'remote') document.body.appendChild(e.mediaElement);

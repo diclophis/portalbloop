@@ -5,16 +5,45 @@
     <script src="javascripts/node.js"></script>
     <script src="javascripts/RTCMultiConnection-v1.3.js"></script>
     <style>
-      html, body, form { width: 100%; height: 100%; padding: 0; margin: 0; }
-      body { display: none; width: 98%; height: 98%; margin: 1%; }
-      body.connected { display: block }
-      video { margin: 1%; width: 33%; -webkit-transition: all 5s; -webkit-transform: scale3d(0.0, 0.0, 0.0); }
-      body.connected video { -webkit-transform: scale3d(1.0, 1.0, 1.0); }
-      button { -webkit-transform: scale3d(2.0, 3.0, 1.0); -webkit-transform-origin: center center; padding: 0; margin: 30% 0 0 24%; width: 13%; }
-      form.disabled { display: none; }
+
+      html, body { width: 100%; height: 100%; padding: 0; margin: 0; font-size: 1em; }
+      body { width: 98%; height: 98%; margin: 1%; }
+      form { display: none; margin: 0.5em; }
+      video { margin: 1%; width: 33%; }
+      button { padding: 0; margin: 1em; width: 9em; height: 3em; }
+      input { padding: 0; margin: 0; width: 8em; height: 2em; font-size: 1em; padding: 0 0.5em 0 0.5em; margin: 0.5em; }
+      label { margin: 0.5em; padding: 0.5em 0 0 0; width: 5em; float: left; }
+      ul { list-style: none; margin: 0; padding: 0; }
+      form.enabled { display: block; }
+
+      #about { float: right; width: 10em; height: 10em; border: 2px solid red; }
+      #about h1 { text-align: center; }
     </style>
   </head>
   <body>
+    <form id="about" action="_blank">
+      <h1>Portal Bloop</h1>
+    </form>
+    <form id="public-rooms" action="_blank">
+      <h1>Public</h1>
+      <button class="public-room-button">connect</button>
+    </form>
+    <form id="private-room" action="_blank">
+      <h1>Private</h1>
+      <ul>
+        <li>
+          <label>User</label>
+          <input type="text" name="user" placeholder="user@imap.com"/>
+        </li>
+        <li>
+          <label>Password</label>
+          <input type="password"/>
+        </li>
+        <li>
+          <button id="bar">connect</button>
+        </li>
+      </ul>
+    </form>
     <form id="baz" action="_blank">
       <button id="foo">create</button>
       <button id="bar">join</button>
