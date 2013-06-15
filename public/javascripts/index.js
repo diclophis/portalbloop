@@ -166,6 +166,8 @@ if (typeof(chrome) == "undefined") {
 
       gmail.connect(function(err) {
         if (err) {
+          gmail._state.conn._socketInfo.socketId = null;
+          showIndex(err.toString());
           throw err;
         } else {
           multiplex();
@@ -199,34 +201,40 @@ if (typeof(chrome) == "undefined") {
       document.getElementById("about").className = "";
       document.getElementById("public-rooms").className = "";
       document.getElementById("private-room").className = "";
+      document.getElementById("msg").innerText = "";
     };
 
-    document.getElementById("about").className = "enabled";
+    var showIndex = function(msg) {
+      document.getElementById("about").className = "enabled";
 
-    chrome.storage.sync.get(function(defaults) {
-      console.log(defaults);
-      document.getElementById("user-input").value = defaults['user'] ? defaults.user : "";
-      document.getElementById("public-rooms").className = "enabled";
-      document.getElementById("private-room").className = "enabled";
-    });
-
-    document.getElementById("public-rooms").onsubmit = function(ev) {
-      hideIndexForms();
-      connectToImapServer(publicSecret);
-      return false;
-    }
-    document.getElementById("private-room").onsubmit = function(ev) {
-      hideIndexForms();
-      var user = document.getElementById("user-input").value;
-      var pass = document.getElementById("pass-input").value;
-      chrome.storage.sync.set({user: user});
-      connectToImapServer({
-        user: user,
-        pass: pass
+      chrome.storage.sync.get(function(defaults) {
+        console.log(defaults);
+        document.getElementById("user-input").value = defaults['user'] ? defaults.user : "";
+        document.getElementById("public-rooms").className = "enabled";
+        document.getElementById("private-room").className = "enabled";
       });
-      return false;
+
+      document.getElementById("public-rooms").onsubmit = function(ev) {
+        hideIndexForms();
+        connectToImapServer(publicSecret);
+        return false;
+      }
+      document.getElementById("private-room").onsubmit = function(ev) {
+        hideIndexForms();
+        var user = document.getElementById("user-input").value;
+        var pass = document.getElementById("pass-input").value;
+        chrome.storage.sync.set({user: user});
+        connectToImapServer({
+          user: user,
+          pass: pass
+        });
+        return false;
+      }
+
+      document.getElementById("msg").innerText = msg ? msg : "";
     }
 
+    showIndex();
   });
 
 }
