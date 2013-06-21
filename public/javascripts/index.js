@@ -53,17 +53,13 @@ var resizeVideos = function() {
 };
 
 
-var thingThatMakesAnAppendEmailFun = function(twerpAddress, kwerkAddress) {
-  return function(thingThatRespondsToAppend, box, data) {
-    var out = "From: " + twerpAddress + "\r\nTo: " + kwerkAddress + "\r\nSubject: " + box + "\r\nDate: " + new Date() + "\r\n\r\n" + data + "\r\n";
+var thingThatMakesAnAppendEmailFun = function(twerpAddress, kwerkAddress, appendedFun) {
+  return function(thingThatRespondsToAppend, subject, data) {
+    var out = "From: " + twerpAddress + "\r\nTo: " + kwerkAddress + "\r\nSubject: " + subject + "\r\nDate: " + new Date() + "\r\n\r\n" + data + "\r\n";
     console.log("out");
     thingThatRespondsToAppend.append(out, {
       mailbox: 'WANGCHUNG'
-    }, function(err) {
-      if (err) {
-        throw err;
-      }
-    });
+    }, appendedFun);
   };
 };
 
@@ -142,6 +138,24 @@ var search = function(notFromThisAddress, thingThatRespondsToSearch) {
 };
 
 
+var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
+  var efg = when.defer();
+  //function(twerpAddress, kwerkAddress)
+  //var fromAddress = user + '+' + sender + '@gmail.com';
+  var appendUserIdEmailFun = thingThatMakesAnAppendEmailFun(fromAddress, fromAddress, function(err) {
+    if (err) {
+      throw err;
+    } else {
+      console.log("made an email");
+    }
+  });
+  //(thingThatRespondsToAppend, box, data) {
+  appendUserIdEmailFun(thingThatIsGmail4, 'presence', null);
+
+  return efg;
+};
+
+
 var multiplex = function(addressToIgnore) {
   if (channels.length > 0) {
     var searches = [];
@@ -175,7 +189,11 @@ var foo = function(fartStarted2, appenderFun, twerkAddress, thingThatRespondsToO
     console.log("new channel", channel);
     socket.send = function (messageAsObject) {
       var messageAsJson = JSON.stringify({data: messageAsObject});
-      appenderFun(thingThatRespondsToOpenBox, channel, messageAsJson);
+      appenderFun(thingThatRespondsToOpenBox, channel, messageAsJson, function(err) {
+        if (err) {
+          throw err;
+        }
+      });
     };
     if (channels.length == 0) {
       thingThatRespondsToOpenBox.openBox('WANGCHUNG', false, function(err) {
@@ -200,7 +218,6 @@ var foo = function(fartStarted2, appenderFun, twerkAddress, thingThatRespondsToO
     }
   };
 };
-
 
 
 var thingThatMakesARetryFun = function(thingThatRespondsToDelBox, sanitizedSession2, connectionCreationFun) {
@@ -236,6 +253,7 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fartStarted3, appendEmailFun2,
         resizeVideos();
       };
 
+      /*
       var retry = thingThatMakesARetryFun(thingThatIsGmail, sanitizedSession, createConnection);
       var currentMinute = new Date().getMinutes();
       console.log("attempting to lock", currentMinute, sanitizedSession);
@@ -254,6 +272,9 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fartStarted3, appendEmailFun2,
         }
       });
       //return connection;
+      */
+
+      createPromiseToReturnUserId(fwerkAddress, thingThatIsGmail);
     };
     //var bloopConnection = createConnection();
     createConnection();
@@ -292,6 +313,7 @@ var connectToImapServer = function(secret) {
       };
       document.getElementById("join-button").onclick = function() {
         //function(fartStarted3, appendEmailFun, fwerkAddress, thingThatIsGmail) {
+
         var appendEmailFun = thingThatMakesAnAppendEmailFun(myAddress, toAddress);
         var openOrConnectToSession = thingThatMakesAnOnOpenOrConnectFun(outstarted, appendEmailFun, myAddress, gmail);
         openOrConnectToSession(sanitizeSessionWang(sessionWang));
