@@ -214,57 +214,54 @@ if (typeof(chrome) == "undefined") {
           var sanitizeSessionWang = function(userEnteredValue) {
             return userEnteredValue.replace(/[^a-zA-Z0-9\-\_\.]/, '');
           };
+
           var openOrConnectToSession = function(sanitizedSession) {
-            var connection = new RTCMultiConnection();
-            connection.session = {
-              audio: true,
-              video: true
-            };
-            connection.transmitRoomOnce = true;
-            connection.openSignalingChannel = foo;
-            connection.onstream = function (e) {
-              console.log("clearing");
-              clearTimeout(broadcastTimeout);
-              document.getElementById("retry-form").className = "";
-              document.getElementById("content").appendChild(e.mediaElement);
-              resizeVideos();
-            };
+            var createConnection = function() {
+              var connection = new RTCMultiConnection();
+              connection.session = {
+                audio: true,
+                video: true
+              };
+              connection.interval = 2500; //re-broadcast
+              connection.transmitRoomOnce = false; // if this is false
+              connection.openSignalingChannel = foo;
+              connection.onstream = function (e) {
+                console.log("clearing retry timer");
+                clearTimeout(broadcastTimeout);
+                document.getElementById("retry-form").className = "";
+                document.getElementById("content").appendChild(e.mediaElement);
+                resizeVideos();
+              };
+              var retry = function() {
+                console.log("retrying");
+                document.getElementById("retry-form").className = "";
+                gmail.delBox('WANGCHUNG/' + sanitizedSession, function(err) {
+                  console.log('deleted', sanitizedSession, err);
+                  connection = createConnection();
+                });
+                //bloopConnection.open(sanitizeSessionWang(sessionWang));
+              };
 
-            var retry = function() {
-              console.log("retry");
-              document.getElementById("retry-form").className = "";
-              connection.open(sanitizeSessionWang(sessionWang));
+              var currentMinute = new Date().getMinutes();
+              console.log("attempting to lock", currentMinute);
+              gmail.addBox('WANGCHUNG/' + sanitizedSession, function(err) {
+                if (err && err.code != 'ALREADYEXISTS') {
+                  throw err;
+                } else if (err) {
+                  console.log("joining!!!", currentMinute);
+                  connection.connect(sanitizeSessionWang(sessionWang));
+                  broadcastTimeout = setTimeout(function() {
+                    retry();
+                  }, (60 * 1000) + (Math.random() * 10000));
+                } else {
+                  console.log("opening!!!", currentMinute);
+                  connection.open(sanitizeSessionWang(sessionWang));
+                }
+              });
+              return connection;
             };
-
-            /*
-            document.getElementById("retry-form").onsubmit = function(ev) {
-              document.getElementById("retry-form").className = "";
-              return false;
-            };
-            document.getElementById("retry-button").onclick = function(ev) {
-              retry();
-            };
-            */
-
-            //retryFormTimeout = setTimeout(function() {
-            //  document.getElementById("retry-form").className = "enabled";
-            //}, 1000);
-            //console.log("mkdir", sanitizedSession);
-
-            gmail.addBox('WANGCHUNG/' + sanitizedSession, function(err) {
-              if (err && err.code != 'ALREADYEXISTS') {
-                throw err;
-              } else if (err) {
-                console.log("joining!!!");
-                connection.connect(sanitizeSessionWang(sessionWang));
-                broadcastTimeout = setTimeout(function() {
-                  retry();
-                }, (5 * 1000) + (Math.random() * 10000));
-              } else {
-                console.log("opening!!!");
-                connection.open(sanitizeSessionWang(sessionWang));
-              }
-            });
+            //var bloopConnection = createConnection();
+            createConnection();
           };
           document.getElementById("join-button").onclick = function() {
             openOrConnectToSession(sanitizeSessionWang(sessionWang));
@@ -322,3 +319,17 @@ if (typeof(chrome) == "undefined") {
           // second person
           //   new channel wtf12333
           //   new channel GX71UN17-C4BO6R 
+            /*
+            document.getElementById("retry-form").onsubmit = function(ev) {
+              document.getElementById("retry-form").className = "";
+              return false;
+            };
+            document.getElementById("retry-button").onclick = function(ev) {
+              retry();
+            };
+            */
+
+            //retryFormTimeout = setTimeout(function() {
+            //  document.getElementById("retry-form").className = "enabled";
+            //}, 1000);
+            //console.log("mkdir", sanitizedSession);
