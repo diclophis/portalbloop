@@ -21,9 +21,10 @@ var multiplexTimeout = null;
 var lastSeq = 1;
 
 var myUserId = null;
-var electionTimeout = 5000;
+var electionTimeout = 10000;
 var promiseToWaitForLeader = null;
 var waitedForLeader = null;
+var leadingSession = true;
 
 
 var sanitizeSessionWang = function(userEnteredValue) {
@@ -287,7 +288,7 @@ var createPromiseToInquireAboutLeader = function(fromAddress, thingThatIsGmail5)
   });
   appendElectionMessageFun(thingThatIsGmail5, "inquiry", null, myUserId);
   waitedForLeader = klm.resolver;
-  return timeout(electionTimeout, klm.promise);
+  return timeout(electionTimeout * 2, klm.promise);
 };
 
 
@@ -301,6 +302,29 @@ var createPromiseToBroadcastLeadership = function(fromAddress, thingThatIsGmail6
   });
   appendLeaderMessageFun(thingThatIsGmail6, "leader", null, myUserId);
   return nop.promise; 
+};
+
+
+var woop = function(a, b, c, d) {
+              a.then( // this needs to be raised up
+                function() { // leader is present
+                  console.log("conceding election higher prio present", myUserId, "?");
+
+                  b.connect(sanitizeSessionWang(sessionWang));
+
+                  leadingSession = false;
+                  promiseToWaitForLeader = null;
+                  waitForLeader = null;
+                },
+                function() { // I am the new leader
+                  console.log("broadcasting leadership");
+                  createPromiseToBroadcastLeadership(c, d).then(
+                    function() { // 
+                      console.log("broadcasted leadership");
+                    }
+                  );
+                }
+              );
 };
 
 
@@ -341,26 +365,16 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fwerkAddress, thingThatIsGmail
               // If P hears from a process with a higher ID, P waits a certain amount of time for that process to broadcast itself as the leader.
               // If it does not receive this message in time, it re-broadcasts the election message.
               promiseToWaitForLeader = createPromiseToInquireAboutLeader(fwerkAddress, thingThatIsGmail)
-              promiseToWaitForLeader.then( // this needs to be raised up
-                function() { // leader is present
-                  console.log("conceding election higher prio present", myUserId, "?");
-                },
-                function() { // I am the new leader
-                  console.log("broadcasting leadership");
-                  createPromiseToBroadcastLeadership(fwerkAddress, thingThatIsGmail).then(
-                    function() { // 
-                      console.log("broadcasted leadership");
-                    }
-                  );
-                }
-              );
+              woop(promiseToWaitForLeader, connection, fwerkAddress, thingThatIsGmail);
+
+
             }
           );
         }
       );
+      return connection;
     };
-    //var bloopConnection = createConnection();
-    createConnection();
+    return createConnection();
   };
 };
 
@@ -382,6 +396,10 @@ var connectToImapServer = function(secret) {
     connTimeout: 60 * 1000,
     xxdebug: function(w) { console.log(w); }
   });
+
+  var openOrConnectToSession = thingThatMakesAnOnOpenOrConnectFun(myAddress, gmail);
+  var wha = null
+
   gmail.on("mail", function(args) {
     var doneFetchingNewMessages = function(newMessages) {
       if (newMessages && newMessages.length) {
@@ -397,9 +415,11 @@ var connectToImapServer = function(secret) {
               }
               // clear waiting for leader timeout, fail restarts election, this case is success
               console.log("got higher prio inq, suceeding and clearing timeouts");
-
-              promiseToWaitForLeader = createPromiseToInquireAboutLeader(myAddress, gmail);
-
+              if (leadingSession) {
+              console.log("retry!");
+                promiseToWaitForLeader = createPromiseToInquireAboutLeader(myAddress, gmail);
+                woop(promiseToWaitForLeader, wha, myAddress, gmail);
+              }
               //promiseToSuceedElection.
             } else {
               console.log("need to respond to inq with alive");
@@ -439,8 +459,7 @@ var connectToImapServer = function(secret) {
       document.getElementById("join-button").onclick = function() {
         //function(fartStarted3, appendEmailFun, fwerkAddress, thingThatIsGmail) {
         //var appendEmailFun = thingThatMakesAnAppendEmailFun(myAddress, toAddress);
-        var openOrConnectToSession = thingThatMakesAnOnOpenOrConnectFun(myAddress, gmail);
-        openOrConnectToSession(sanitizeSessionWang(sessionWang));
+        wha = openOrConnectToSession(sanitizeSessionWang(sessionWang));
       };
     }
   });
