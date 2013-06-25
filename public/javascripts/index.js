@@ -17,6 +17,8 @@ var outstarted = {};
 var broadcastTimeout = null;
 var multiplexTimeout = null;
 
+var myUserId = null;
+
 
 var sanitizeSessionWang = function(userEnteredValue) {
   return userEnteredValue.replace(/[^a-zA-Z0-9\-\_\.]/, '');
@@ -56,7 +58,6 @@ var resizeVideos = function() {
 var thingThatMakesAnAppendEmailFun = function(twerpAddress, kwerkAddress, appendedFun) {
   return function(thingThatRespondsToAppend, subject, data) {
     var out = "From: " + twerpAddress + "\r\nTo: " + kwerkAddress + "\r\nSubject: " + subject + "\r\nDate: " + new Date() + "\r\n\r\n" + data + "\r\n";
-    console.log("out");
     thingThatRespondsToAppend.append(out, {
       mailbox: 'WANGCHUNG'
     }, appendedFun);
@@ -150,17 +151,12 @@ var search = function(notFromThisAddress, thingThatRespondsToSearch) {
 
 var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
   var efg = when.defer();
-  //var needsafun = function() {
-  //  debugger;
-  //  efg.resolve();
-  //};
   var doneFetchingUserIdEmails = function(userIdEmails) {
     if (userIdEmails && userIdEmails.length) {
-      // first email uid is userId
-      efg.resolve(userIdEmails[0].uid);
+      myUserId = userIdEmails[0].uid;
+      efg.resolve();
     }
   };
-
   var appendUserIdEmailFun = thingThatMakesAnAppendEmailFun(fromAddress, fromAddress, function(err, info) {
     if (err) {
       throw err;
@@ -175,9 +171,7 @@ var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
       });
     }
   });
-
   appendUserIdEmailFun(thingThatIsGmail4, null, null);
-
   return efg.promise;
 };
 
@@ -300,18 +294,10 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fartStarted3, appendEmailFun2,
       //return connection;
       */
 
-      createPromiseToReturnUserId(fwerkAddress, thingThatIsGmail).then(
-        function(newUserId) {
-          debugger;
-        }
-        /*
-        ,
-        function(args) {
-        },
-        function(args) {
-        }
-        */
-      );
+      //TODO: impl. err
+      createPromiseToReturnUserId(fwerkAddress, thingThatIsGmail).then(function() {
+        console.log(myUserId);
+      });
     };
     //var bloopConnection = createConnection();
     createConnection();
@@ -378,7 +364,6 @@ var showIndex = function(msg) {
 
   document.getElementById("public-rooms").onsubmit = function(ev) {
     hideIndexForms();
-    console.log(publicSecret);
     connectToImapServer(publicSecret);
     return false;
   };
