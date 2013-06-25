@@ -133,26 +133,41 @@ var search = function(notFromThisAddress, thingThatRespondsToSearch) {
   var abc = when.defer();
   var needsafun = function() {};
   var signalHandlingFun = thingThatMakesAnOnSearchResultsFun(outstarted, thingThatRespondsToSearch, abc, needsafun);
-  thingThatRespondsToSearch.search(['UNSEEN', ['!HEADER', 'From', notFromThisAddress]], handleInComingMessages(signalHandlingFun));
+  thingThatRespondsToSearch.search(['UNSEEN', ['!HEADER', 'From', notFromThisAddress]], signalHandlingFun);
   return abc.promise;
 };
 
 
 var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
   var efg = when.defer();
-  //function(twerpAddress, kwerkAddress)
-  //var fromAddress = user + '+' + sender + '@gmail.com';
-  var appendUserIdEmailFun = thingThatMakesAnAppendEmailFun(fromAddress, fromAddress, function(err) {
+  var needsafun = function() {
+    debugger;
+    efg.resolve();
+  };
+  var appendUserIdEmailFun = thingThatMakesAnAppendEmailFun(fromAddress, fromAddress, function(err, info) {
     if (err) {
       throw err;
     } else {
-      console.log("made an email");
+      console.log("made an email", info);
+
+      //setTimeout(function() {
+        thingThatIsGmail4.openBox('WANGCHUNG', false, function(err) {
+          if (err) {
+            throw err;
+          } else {
+            var userIdHandlingFun = thingThatMakesAnOnSearchResultsFun(outstarted, thingThatIsGmail4, efg, needsafun);
+            console.log(fromAddress);
+            thingThatIsGmail4.search([['HEADER', 'To', fromAddress]], userIdHandlingFun);
+            //thingThatIsGmail4.search(['UNSEEN', ['TO', fromAddress]], userIdHandlingFun);
+          }
+        });
+      //}, 5000);
     }
   });
-  //(thingThatRespondsToAppend, box, data) {
+      //(thingThatRespondsToAppend, box, data) {
   appendUserIdEmailFun(thingThatIsGmail4, 'presence', null);
 
-  return efg;
+  return efg.promise;
 };
 
 
@@ -274,7 +289,10 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fartStarted3, appendEmailFun2,
       //return connection;
       */
 
-      createPromiseToReturnUserId(fwerkAddress, thingThatIsGmail);
+      createPromiseToReturnUserId(fwerkAddress, thingThatIsGmail).then(
+      function(args) {
+        debugger;
+      }, null, null);
     };
     //var bloopConnection = createConnection();
     createConnection();
@@ -283,8 +301,8 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fartStarted3, appendEmailFun2,
 
 
 var connectToImapServer = function(secret) {
-  var myAddress = secret.user + '+' + sender + '@gmail.com';
-  var toAddress = secret.user + '@gmail.com';
+  var myAddress = secret.user + '+' + sender; // + '@gmail.com';
+  var toAddress = secret.user; // + '@gmail.com';
   var gmail = new imap({
     user: secret.user,
     password: secret.pass,
@@ -297,7 +315,7 @@ var connectToImapServer = function(secret) {
     port: 8000,
     secure: false,
     connTimeout: 60 * 1000,
-    //debug: function(w) { console.log(w); }
+    xxdebug: function(w) { console.log(w); }
   });
   gmail.connect(function(err) {
     if (err) {
