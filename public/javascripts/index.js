@@ -64,7 +64,7 @@ var thingThatMakesAnAppendEmailFun = function(twerpAddress, kwerkAddress, append
 };
 
 
-var thingThatMakesAnOnFetchFun = function (wangs) {
+var thingThatMakesAnOnFetchFun = function (onFetchedEmailFun) {
   return function(fetch) {
     fetch.on('message', function(msg) {
       var body = "";
@@ -77,51 +77,61 @@ var thingThatMakesAnOnFetchFun = function (wangs) {
       });
       msg.on('end', function() {
         //console.log("inbound on channel", thingy);
-        var date = headers['date'] ? headers.date[0] : '01/01/01';
-        var thingy = headers.subject[0];
-        if (startDate < Date.parse(date)) {
-          var messageAsJson = body;
-          var messageAsObject = JSON.parse(messageAsJson);
+        //var date = headers['date'] ? headers.date[0] : '01/01/01';
+        //var thingy = headers.subject[0];
+        var email = {
+          uid: this.uid,
+          headers: headers,
+          body: body
+        };
+        //if (startDate < Date.parse(date)) {
+          //var messageAsJson = body;
+          //var messageAsObject = JSON.parse(messageAsJson);
           //console.log(outstarted);
-          if (wangs[thingy]) {
-            wangs[thingy](messageAsObject.data);
-          }
-        }
+          //if (wangs[thingy]) {
+          //  wangs[thingy](messageAsObject.data);
+          //}
+        //}
+        onFetchedEmailFun(email);
       });
     });
   };
 };
 
 
-var thingThatMakesAnOnSearchResultsFun = function(fartStarted, thingThatRespondsToFetch, future, seenMessages2, needsafun2) {
+var thingThatMakesAnOnSearchResultsFun = function(thingThatRespondsToFetch, onFetchedAllEmailsFun) {
+  var searchResults = [];
   return function(err, results) {
     if (err) {
       throw err;
     }
     if (results.length == 0) {
-      future.resolve(needsafun2);
+      //future.resolve(needsafun2);
+      //onFetchedAllEmailsFun(null);
     } else {
       var notseen = [];
       for (var i=0; i<results.length; i++) {
         if (typeof(seenMessages[results[i]]) === "undefined") {
-          seenMessages2[results[i]] = true;
+          seenMessages[results[i]] = true;
           notseen.push(results[i]);
-        } else {
         }
       }
       if (notseen.length == 0) {
-        future.resolve(needsafun2);
+        //future.resolve(needsafun2);
+        //onFetchedAllEmailsFun(null);
       } else {
         thingThatRespondsToFetch.fetch(notseen, {}, {
           body: true,
           headers: ['Date', 'Subject'],
-          cb: thingThatMakesAnOnFetchFun(fartStarted)
+          cb: thingThatMakesAnOnFetchFun(function(fetchedEmail) {
+            searchResults.push(fetchedEmail);
+          })
         },
         function(err) {
           if (err) {
             throw err;
           }
-          future.resolve(needsafun2);
+          onFetchedAllEmailsFun(searchResults);
         });
       }
     }
@@ -140,32 +150,33 @@ var search = function(notFromThisAddress, thingThatRespondsToSearch) {
 
 var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
   var efg = when.defer();
-  var needsafun = function() {
-    debugger;
-    efg.resolve();
+  //var needsafun = function() {
+  //  debugger;
+  //  efg.resolve();
+  //};
+  var doneFetchingUserIdEmails = function(userIdEmails) {
+    if (userIdEmails && userIdEmails.length) {
+      // first email uid is userId
+      efg.resolve(userIdEmails[0].uid);
+    }
   };
+
   var appendUserIdEmailFun = thingThatMakesAnAppendEmailFun(fromAddress, fromAddress, function(err, info) {
     if (err) {
       throw err;
     } else {
-      console.log("made an email", info);
-
-      //setTimeout(function() {
-        thingThatIsGmail4.openBox('WANGCHUNG', false, function(err) {
-          if (err) {
-            throw err;
-          } else {
-            var userIdHandlingFun = thingThatMakesAnOnSearchResultsFun(outstarted, thingThatIsGmail4, efg, needsafun);
-            console.log(fromAddress);
-            thingThatIsGmail4.search([['HEADER', 'To', fromAddress]], userIdHandlingFun);
-            //thingThatIsGmail4.search(['UNSEEN', ['TO', fromAddress]], userIdHandlingFun);
-          }
-        });
-      //}, 5000);
+      thingThatIsGmail4.openBox('WANGCHUNG', false, function(err) {
+        if (err) {
+          throw err;
+        } else {
+          var userIdHandlingFun = thingThatMakesAnOnSearchResultsFun(thingThatIsGmail4, doneFetchingUserIdEmails);
+          thingThatIsGmail4.search([['HEADER', 'To', fromAddress]], userIdHandlingFun);
+        }
+      });
     }
   });
-      //(thingThatRespondsToAppend, box, data) {
-  appendUserIdEmailFun(thingThatIsGmail4, 'presence', null);
+
+  appendUserIdEmailFun(thingThatIsGmail4, null, null);
 
   return efg.promise;
 };
@@ -290,9 +301,17 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fartStarted3, appendEmailFun2,
       */
 
       createPromiseToReturnUserId(fwerkAddress, thingThatIsGmail).then(
-      function(args) {
-        debugger;
-      }, null, null);
+        function(newUserId) {
+          debugger;
+        }
+        /*
+        ,
+        function(args) {
+        },
+        function(args) {
+        }
+        */
+      );
     };
     //var bloopConnection = createConnection();
     createConnection();
