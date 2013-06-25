@@ -4,6 +4,8 @@ var assert = require('assert');
 var util = require('util');
 var imap = require('imap');
 var when = require('when');
+var RTCMultiConnection = require('./rtcmulticonnection');
+var timeout = require('when/timeout');
 var sequence = require('when/sequence');
 var publicSecret = require('./secret');
 var signalMailbox = 'BLOOP_SIGNAL';
@@ -16,8 +18,12 @@ var channels = [];
 var outstarted = {};
 var broadcastTimeout = null;
 var multiplexTimeout = null;
+var lastSeq = 1;
 
 var myUserId = null;
+var electionTimeout = 5000;
+var promiseToWaitForLeader = null;
+var waitedForLeader = null;
 
 
 var sanitizeSessionWang = function(userEnteredValue) {
@@ -56,8 +62,14 @@ var resizeVideos = function() {
 
 
 var thingThatMakesAnAppendEmailFun = function(twerpAddress, kwerkAddress, appendedFun) {
-  return function(thingThatRespondsToAppend, subject, data) {
-    var out = "From: " + twerpAddress + "\r\nTo: " + kwerkAddress + "\r\nSubject: " + subject + "\r\nDate: " + new Date() + "\r\n\r\n" + data + "\r\n";
+  return function(thingThatRespondsToAppend, subject, data, priority) {
+    var out = "";
+    out += "From: " + twerpAddress + "\r\n";
+    out += "To: " + kwerkAddress + "\r\n";
+    out += "Subject: " + subject + "\r\n";
+    out += "Date: " + new Date() + "\r\n";
+    out += "Priority: " + priority + "\r\n";
+    out += "\r\n" + data + "\r\n";
     thingThatRespondsToAppend.append(out, {
       mailbox: 'WANGCHUNG'
     }, appendedFun);
@@ -67,7 +79,7 @@ var thingThatMakesAnAppendEmailFun = function(twerpAddress, kwerkAddress, append
 
 var thingThatMakesAnOnFetchFun = function (onFetchedEmailFun) {
   return function(fetch) {
-    fetch.on('message', function(msg) {
+    fetch.on("message", function(msg) {
       var body = "";
       var headers = null;
       msg.on('data', function(chunk) {
@@ -80,10 +92,15 @@ var thingThatMakesAnOnFetchFun = function (onFetchedEmailFun) {
         //console.log("inbound on channel", thingy);
         //var date = headers['date'] ? headers.date[0] : '01/01/01';
         //var thingy = headers.subject[0];
+        //var thingy = headers.subject[0];
+        lastSeq = this.seqno;
         var email = {
           uid: this.uid,
           headers: headers,
-          body: body
+          from: headers.from[0],
+          subject: headers.subject[0],
+          body: body,
+          priority: parseInt(headers.priority[0])
         };
         //if (startDate < Date.parse(date)) {
           //var messageAsJson = body;
@@ -123,7 +140,7 @@ var thingThatMakesAnOnSearchResultsFun = function(thingThatRespondsToFetch, onFe
       } else {
         thingThatRespondsToFetch.fetch(notseen, {}, {
           body: true,
-          headers: ['Date', 'Subject'],
+          headers: ['Date', 'From', 'Subject', 'Priority'],
           cb: thingThatMakesAnOnFetchFun(function(fetchedEmail) {
             searchResults.push(fetchedEmail);
           })
@@ -253,7 +270,41 @@ var thingThatMakesARetryFun = function(thingThatRespondsToDelBox, sanitizedSessi
 };
 
 
-var thingThatMakesAnOnOpenOrConnectFun = function(fartStarted3, appendEmailFun2, fwerkAddress, thingThatIsGmail) {
+var createPromiseToConnectToExistingSession = function(rtcSignallingConnection) {
+  var hij = when.defer();
+  //rtcSignallingConnection.open();
+  return timeout(electionTimeout, hij.promise);
+};
+
+
+var createPromiseToInquireAboutLeader = function(fromAddress, thingThatIsGmail5) {
+  var klm = when.defer();
+  var appendElectionMessageFun = thingThatMakesAnAppendEmailFun(fromAddress, fromAddress, function(err, info) {
+    if (err) {
+      throw err;
+    }
+    console.log("waiting for alive message from leader");
+  });
+  appendElectionMessageFun(thingThatIsGmail5, "inquiry", null, myUserId);
+  waitedForLeader = klm.resolver;
+  return timeout(electionTimeout, klm.promise);
+};
+
+
+var createPromiseToBroadcastLeadership = function(fromAddress, thingThatIsGmail6) {
+  var nop = when.defer();
+  var appendLeaderMessageFun = thingThatMakesAnAppendEmailFun(fromAddress, fromAddress, function(err, info) {
+    if (err) {
+      throw err;
+    }
+    nop.resolve();
+  });
+  appendLeaderMessageFun(thingThatIsGmail6, "leader", null, myUserId);
+  return nop.promise; 
+};
+
+
+var thingThatMakesAnOnOpenOrConnectFun = function(fwerkAddress, thingThatIsGmail) {
   return function(sanitizedSession) {
     var createConnection = function() {
       var connection = new RTCMultiConnection();
@@ -261,43 +312,52 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fartStarted3, appendEmailFun2,
         audio: true,
         video: true
       };
-      connection.interval = 2500; //re-broadcast
+      connection.interval = 1000; //re-broadcast
       connection.transmitRoomOnce = false; // if this is false
       //function(fartStarted2, appenderFun, twerkAddress, thingThatRespondsToOpenBox)
-      connection.openSignalingChannel = foo(fartStarted3, appendEmailFun2, fwerkAddress, thingThatIsGmail);
+      connection.openSignalingChannel = foo(fwerkAddress, thingThatIsGmail);
       connection.onstream = function (e) {
-        console.log("clearing retry timer");
-        clearTimeout(broadcastTimeout);
-        document.getElementById("retry-form").className = "";
-        document.getElementById("content").appendChild(e.mediaElement);
-        resizeVideos();
+        //console.log("clearing retry timer");
+        //clearTimeout(broadcastTimeout);
+        //document.getElementById("retry-form").className = "";
+        //document.getElementById("content").appendChild(e.mediaElement);
+        //resizeVideos();
       };
-
-      /*
-      var retry = thingThatMakesARetryFun(thingThatIsGmail, sanitizedSession, createConnection);
-      var currentMinute = new Date().getMinutes();
-      console.log("attempting to lock", currentMinute, sanitizedSession);
-      thingThatIsGmail.addBox('WANGCHUNG/' + sanitizedSession, function(err) {
-        if (err && err.code != 'ALREADYEXISTS') {
-          throw err;
-        } else if (err) {
-          console.log("joining!!!", currentMinute, err);
-          connection.connect(sanitizeSessionWang(sessionWang));
-          broadcastTimeout = setTimeout(function() {
-            retry();
-          }, (60 * 1000) + (Math.random() * 10000));
-        } else {
-          console.log("opening!!!", currentMinute);
-          connection.open(sanitizeSessionWang(sessionWang));
-        }
-      });
-      //return connection;
-      */
-
       //TODO: impl. err
-      createPromiseToReturnUserId(fwerkAddress, thingThatIsGmail).then(function() {
-        console.log(myUserId);
-      });
+      createPromiseToReturnUserId(fwerkAddress, thingThatIsGmail).then(
+        function() { // got the highest process ID
+          console.log("established prio", myUserId);
+          createPromiseToConnectToExistingSession(connection).then(
+            function() { // joined existing session
+              console.log("/??");
+            },
+            function() { // begin re-election
+              console.log("begining election");
+              // When a process P determines that the current coordinator is down because of message timeouts or failure of the coordinator to initiate a handshake,
+              // it performs the following sequence of actions:
+              // P broadcasts an election message (inquiry) to all other processes with higher process IDs, expecting an "I am alive" response from them if they are alive.
+              // If P hears from no process with a higher process ID than it, it wins the election and broadcasts victory.
+              // If P gets an election message (inquiry) from another process with a lower ID it sends an "I am alive" message back and starts new elections.
+              // If P hears from a process with a higher ID, P waits a certain amount of time for that process to broadcast itself as the leader.
+              // If it does not receive this message in time, it re-broadcasts the election message.
+              promiseToWaitForLeader = createPromiseToInquireAboutLeader(fwerkAddress, thingThatIsGmail)
+              promiseToWaitForLeader.then( // this needs to be raised up
+                function() { // leader is present
+                  console.log("conceding election higher prio present", myUserId, "?");
+                },
+                function() { // I am the new leader
+                  console.log("broadcasting leadership");
+                  createPromiseToBroadcastLeadership(fwerkAddress, thingThatIsGmail).then(
+                    function() { // 
+                      console.log("broadcasted leadership");
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
     };
     //var bloopConnection = createConnection();
     createConnection();
@@ -322,6 +382,48 @@ var connectToImapServer = function(secret) {
     connTimeout: 60 * 1000,
     xxdebug: function(w) { console.log(w); }
   });
+  gmail.on("mail", function(args) {
+    var doneFetchingNewMessages = function(newMessages) {
+      if (newMessages && newMessages.length) {
+        var newMessage = newMessages[0];
+        //console.log(newMessage);
+        if (newMessage.subject == "inquiry" || newMessage.subject == "leader" || newMessage.subject == "alive") {
+          if (newMessage.from != myAddress) {
+            if (newMessage.priority > myUserId) {
+              // clear election timeout
+              if (waitedForLeader && promiseToWaitForLeader && promiseToWaitForLeader.inspect().state == "pending") {
+                console.log("clearing");
+                waitedForLeader.resolve();
+              }
+              // clear waiting for leader timeout, fail restarts election, this case is success
+              console.log("got higher prio inq, suceeding and clearing timeouts");
+
+              promiseToWaitForLeader = createPromiseToInquireAboutLeader(myAddress, gmail);
+
+              //promiseToSuceedElection.
+            } else {
+              console.log("need to respond to inq with alive");
+
+
+  //var klm = when.defer();
+  var appendAliveMessageFun = thingThatMakesAnAppendEmailFun(myAddress, myAddress, function(err, info) {
+    if (err) {
+      throw err;
+    }
+    console.log("send alive");
+  });
+  appendAliveMessageFun(gmail, "alive", null, myUserId);
+  //return timeout(electionTimeout, klm.promise);
+
+
+            }
+          }
+        }
+      }
+    };
+    var newMessageHandlingFun = thingThatMakesAnOnSearchResultsFun(gmail, doneFetchingNewMessages);
+    gmail.search([[lastSeq + ':*']], newMessageHandlingFun);
+  });
   gmail.connect(function(err) {
     if (err) {
       gmail._state.conn._socketInfo.socketId = null;
@@ -336,9 +438,8 @@ var connectToImapServer = function(secret) {
       };
       document.getElementById("join-button").onclick = function() {
         //function(fartStarted3, appendEmailFun, fwerkAddress, thingThatIsGmail) {
-
-        var appendEmailFun = thingThatMakesAnAppendEmailFun(myAddress, toAddress);
-        var openOrConnectToSession = thingThatMakesAnOnOpenOrConnectFun(outstarted, appendEmailFun, myAddress, gmail);
+        //var appendEmailFun = thingThatMakesAnAppendEmailFun(myAddress, toAddress);
+        var openOrConnectToSession = thingThatMakesAnOnOpenOrConnectFun(myAddress, gmail);
         openOrConnectToSession(sanitizeSessionWang(sessionWang));
       };
     }
@@ -414,3 +515,24 @@ if (typeof(chrome) == "undefined") {
             //  document.getElementById("retry-form").className = "enabled";
             //}, 1000);
             //console.log("mkdir", sanitizedSession);
+
+      /*
+      var retry = thingThatMakesARetryFun(thingThatIsGmail, sanitizedSession, createConnection);
+      var currentMinute = new Date().getMinutes();
+      console.log("attempting to lock", currentMinute, sanitizedSession);
+      thingThatIsGmail.addBox('WANGCHUNG/' + sanitizedSession, function(err) {
+        if (err && err.code != 'ALREADYEXISTS') {
+          throw err;
+        } else if (err) {
+          console.log("joining!!!", currentMinute, err);
+          connection.connect(sanitizeSessionWang(sessionWang));
+          broadcastTimeout = setTimeout(function() {
+            retry();
+          }, (60 * 1000) + (Math.random() * 10000));
+        } else {
+          console.log("opening!!!", currentMinute);
+          connection.open(sanitizeSessionWang(sessionWang));
+        }
+      });
+      //return connection;
+      */
