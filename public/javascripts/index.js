@@ -93,11 +93,7 @@ var thingThatMakesAnOnFetchFun = function (onFetchedEmailFun) {
         headers = hdrs;
       });
       msg.on('end', function() {
-        //console.log("inbound on channel", thingy);
-        //var date = headers['date'] ? headers.date[0] : '01/01/01';
-        //var thingy = headers.subject[0];
-        //var thingy = headers.subject[0];
-        console.log("got", this.seqno, this.uid);
+        console.log("got message", this.seqno, this.uid);
         lastSeq = this.uid;
         var email = {
           uid: this.uid,
@@ -107,14 +103,6 @@ var thingThatMakesAnOnFetchFun = function (onFetchedEmailFun) {
           body: body,
           priority: parseInt(headers.priority[0])
         };
-        //if (startDate < Date.parse(date)) {
-          //var messageAsJson = body;
-          //var messageAsObject = JSON.parse(messageAsJson);
-          //console.log(outstarted);
-          //if (wangs[thingy]) {
-          //  wangs[thingy](messageAsObject.data);
-          //}
-        //}
         onFetchedEmailFun(email);
       });
     });
@@ -197,31 +185,6 @@ var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
   return efg.promise;
 };
 
-/*
-var multiplex = function(addressToIgnore) {
-  if (channels.length > 0) {
-    var searches = [];
-    var prom = search(addressToIgnore);
-    searches.push(prom);
-    var tail = sequence(searches);
-    tail.then(function(a) {
-      //console.log("resolve!!!!!", a);
-    },
-    function(b) {
-      //console.log("fail", b);
-    },
-    function(c) {
-      //console.log("notify", c);
-    }).ensure(function(a) {
-      //setTimeout(multiplex, 1000 / 24, addressToIgnore);
-      console.log("search assured");
-    });
-  }
-
-  setTimeout(multiplex, 1000 / 24, addressToIgnore);
-};
-*/
-
 
 var foo = function(twerkAddress, thingThatRespondsToOpenBox) {
   return function(config) {
@@ -235,56 +198,22 @@ var foo = function(twerkAddress, thingThatRespondsToOpenBox) {
       if (err) {
         throw err;
       }
-      console.log("sent signal");
+      console.log("sent signal", info);
     });
 
     socket.send = function (messageAsObject) {
       var messageAsJson = JSON.stringify({data: messageAsObject});
-
       appenderFun(thingThatRespondsToOpenBox, channel, messageAsJson, myUserId);
-
-      //appenderFun(thingThatRespondsToOpenBox, channel, messageAsJson, function(err) {
-      //  if (err) {
-      //    throw err;
-      //  }
-      //});
-
     };
 
-
-          if (config.callback) {
-            setTimeout(function() {
-              channels.push({
-                box: channel
-              });
-              config.callback(socket);
-            }, 1000 / 24);
-          }
-
-    /*
-    if (channels.length == 0) {
-      thingThatRespondsToOpenBox.openBox('WANGCHUNG', false, function(err) {
-        if (err) {
-          throw err;
-        } else {
-          if (config.callback) {
-            setTimeout(function() {
-              channels.push({
-                box: channel
-              });
-              // HACK multiplex();
-              config.callback(socket);
-            }, 1000 / 24);
-          }
-        }
-      });
-    } else {
+    if (config.callback) {
       setTimeout(function() {
+        channels.push({
+          box: channel
+        });
         config.callback(socket);
       }, 1000 / 24);
     }
-    */
-
   };
 };
 
@@ -297,7 +226,6 @@ var thingThatMakesARetryFun = function(thingThatRespondsToDelBox, sanitizedSessi
       console.log('deleted', sanitizedSession2, err);
       createdConnection = connectionCreationFun();
     });
-    //bloopConnection.open(sanitizeSessionWang(sessionWang));
   };
 };
 
@@ -338,27 +266,27 @@ var createPromiseToBroadcastLeadership = function(fromAddress, thingThatIsGmail6
 
 
 var woop = function(a, b, c, d) {
-              a.then( // this needs to be raised up
-                function() { // leader is present
-                  console.log("conceding election higher prio present", myUserId, "?");
+  a.then( // this needs to be raised up
+    function() { // leader is present
+      console.log("conceding election higher prio present", myUserId, "?");
 
-                  b.connect(sanitizeSessionWang(sessionWang));
+      b.connect(sanitizeSessionWang(sessionWang));
 
-                  leadingSession = false;
-                  promiseToWaitForLeader = null;
-                  waitForLeader = null;
-                },
-                function() { // I am the new leader
-                  console.log("broadcasting leadership");
-                  createPromiseToBroadcastLeadership(c, d).then(
-                    function() { // 
-                      b.open(sanitizeSessionWang(sessionWang));
-                      console.log("broadcasted leadership");
-                      //woop(a, b, c, d);
-                    }
-                  );
-                }
-              );
+      leadingSession = false;
+      promiseToWaitForLeader = null;
+      waitForLeader = null;
+    },
+    function() { // I am the new leader
+      console.log("broadcasting leadership");
+      createPromiseToBroadcastLeadership(c, d).then(
+        function() { // 
+          b.open(sanitizeSessionWang(sessionWang));
+          console.log("broadcasted leadership");
+          //woop(a, b, c, d);
+        }
+      );
+    }
+  );
 };
 
 
@@ -391,7 +319,7 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fwerkAddress, thingThatIsGmail
           promiseToJoinExistingSession = createPromiseToConnectToExistingSession(connection);
           promiseToJoinExistingSession.then(
             function() { // joined existing session
-              console.log("/??");
+              console.log("started local video, joined session");
             },
             function() { // begin re-election
               console.log("begining election");
@@ -438,54 +366,54 @@ var connectToImapServer = function(secret) {
 
   gmail.on("mail", function(args) {
     var doneFetchingNewMessages = function(newMessages) {
-    console.log(newMessages);
       if (newMessages && newMessages.length) {
-        var newMessage = newMessages[0];
-        //console.log(newMessage);
-        //console.log("got something", newMessage);
-        if (outstarted[newMessage.subject]) {
-          //if (newMessage.from != myAddress) {
-            var messageAsJson = newMessage.body;
-            var messageAsObject = JSON.parse(messageAsJson);
-            outstarted[newMessage.subject](messageAsObject.data);
-            console.log("got signal", messageAsObject);
-          //}
-        } else if (newMessage.subject == "inquiry" || newMessage.subject == "leader" || newMessage.subject == "alive") {
-          if (newMessage.from != myAddress) {
-            if (newMessage.priority > myUserId) {
-              // clear election timeout
-              if (waitedForLeader && promiseToWaitForLeader && promiseToWaitForLeader.inspect().state == "pending") {
-                console.log("clearing");
-                waitedForLeader.resolve();
+        for (var i=0; i<newMessages.length; i++) {
+          var newMessage = newMessages[i];
+          //console.log(newMessage);
+          //console.log("got something", newMessage);
+          if (outstarted[newMessage.subject]) {
+            //if (newMessage.from != myAddress) {
+              var messageAsJson = newMessage.body;
+              var messageAsObject = JSON.parse(messageAsJson);
+              outstarted[newMessage.subject](messageAsObject.data);
+              console.log("got signal", messageAsObject);
+            //}
+          } else if (newMessage.subject == "inquiry" || newMessage.subject == "leader" || newMessage.subject == "alive") {
+            if (newMessage.from != myAddress) {
+              if (newMessage.priority > myUserId) {
+                // clear election timeout
+                if (waitedForLeader && promiseToWaitForLeader && promiseToWaitForLeader.inspect().state == "pending") {
+                  console.log("clearing");
+                  waitedForLeader.resolve();
+                }
+                // clear waiting for leader timeout, fail restarts election, this case is success
+                console.log("got higher prio inq, suceeding and clearing timeouts");
+                //if (leadingSession) {
+                  console.log("retry!");
+                  promiseToWaitForLeader = createPromiseToInquireAboutLeader(myAddress, gmail);
+                  woop(promiseToWaitForLeader, wha, myAddress, gmail);
+                //}
+                //promiseToSuceedElection.
+              } else {
+                console.log("need to respond to inq with alive");
+                var appendAliveMessageFun = thingThatMakesAnAppendEmailFun(myAddress, myAddress, function(err, info) {
+                  if (err) {
+                    throw err;
+                  }
+                  console.log("send alive");
+                });
+                appendAliveMessageFun(gmail, "alive", null, myUserId);
               }
-              // clear waiting for leader timeout, fail restarts election, this case is success
-              console.log("got higher prio inq, suceeding and clearing timeouts");
-              //if (leadingSession) {
-                console.log("retry!");
-                promiseToWaitForLeader = createPromiseToInquireAboutLeader(myAddress, gmail);
-                woop(promiseToWaitForLeader, wha, myAddress, gmail);
-              //}
-              //promiseToSuceedElection.
-            } else {
-              console.log("need to respond to inq with alive");
-
-  var appendAliveMessageFun = thingThatMakesAnAppendEmailFun(myAddress, myAddress, function(err, info) {
-    if (err) {
-      throw err;
-    }
-    console.log("send alive");
-  });
-  appendAliveMessageFun(gmail, "alive", null, myUserId);
-
-
             }
           }
         }
       }
     };
     var newMessageHandlingFun = thingThatMakesAnOnSearchResultsFun(gmail, doneFetchingNewMessages);
-    console.log(lastSeq);
-    gmail.search([[(lastSeq - 100) + ':*']], newMessageHandlingFun);
+    var range = (lastSeq) + ':*';
+    //range = '1:*';
+    console.log("searching starting at", range);
+    gmail.search([[range]], newMessageHandlingFun);
     //gmail.seq.search([['NEW']], newMessageHandlingFun);
   });
   gmail.connect(function(err) {
