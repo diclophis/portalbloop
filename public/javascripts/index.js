@@ -1,4 +1,5 @@
 //
+//"use strict";
 
 var assert = require('assert');
 var util = require('util');
@@ -22,7 +23,7 @@ var lastSeq = 1;
 
 var myUserId = null;
 var electionTimeout = 1000 / 24;
-var waitTimeout = 5000;
+var waitTimeout = 30000;
 var promiseToWaitForLeader = null;
 var promiseToJoinExistingSession = null;
 var waitedForLeader = null;
@@ -96,7 +97,8 @@ var thingThatMakesAnOnFetchFun = function (onFetchedEmailFun) {
         //var date = headers['date'] ? headers.date[0] : '01/01/01';
         //var thingy = headers.subject[0];
         //var thingy = headers.subject[0];
-        lastSeq = this.seqno;
+        console.log("got", this.seqno, this.uid);
+        lastSeq = this.uid;
         var email = {
           uid: this.uid,
           headers: headers,
@@ -160,13 +162,13 @@ var thingThatMakesAnOnSearchResultsFun = function(thingThatRespondsToFetch, onFe
 };
 
 
-var search = function(notFromThisAddress, thingThatRespondsToSearch) {
-  var abc = when.defer();
-  var needsafun = function() {};
-  var signalHandlingFun = thingThatMakesAnOnSearchResultsFun(outstarted, thingThatRespondsToSearch, abc, needsafun);
-  thingThatRespondsToSearch.search(['UNSEEN', ['!HEADER', 'From', notFromThisAddress]], signalHandlingFun);
-  return abc.promise;
-};
+//var search = function(notFromThisAddress, thingThatRespondsToSearch) {
+//  var abc = when.defer();
+//  var needsafun = function() {};
+//  var signalHandlingFun = thingThatMakesAnOnSearchResultsFun(outstarted, thingThatRespondsToSearch, abc, needsafun);
+//  thingThatRespondsToSearch.search(['UNSEEN', ['!HEADER', 'From', notFromThisAddress]], signalHandlingFun);
+//  return abc.promise;
+//};
 
 
 var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
@@ -195,7 +197,7 @@ var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
   return efg.promise;
 };
 
-
+/*
 var multiplex = function(addressToIgnore) {
   if (channels.length > 0) {
     var searches = [];
@@ -218,6 +220,7 @@ var multiplex = function(addressToIgnore) {
 
   setTimeout(multiplex, 1000 / 24, addressToIgnore);
 };
+*/
 
 
 var foo = function(twerkAddress, thingThatRespondsToOpenBox) {
@@ -351,7 +354,7 @@ var woop = function(a, b, c, d) {
                     function() { // 
                       b.open(sanitizeSessionWang(sessionWang));
                       console.log("broadcasted leadership");
-                      woop(a, b, c, d);
+                      //woop(a, b, c, d);
                     }
                   );
                 }
@@ -367,7 +370,7 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fwerkAddress, thingThatIsGmail
         audio: true,
         video: true
       };
-      connection.interval = 100; //re-broadcast
+      connection.interval = 2000; //re-broadcast
       connection.transmitRoomOnce = false; // if this is false
       //function(fartStarted2, appenderFun, twerkAddress, thingThatRespondsToOpenBox)
       connection.openSignalingChannel = foo(fwerkAddress, thingThatIsGmail);
@@ -399,7 +402,7 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fwerkAddress, thingThatIsGmail
               // If P gets an election message (inquiry) from another process with a lower ID it sends an "I am alive" message back and starts new elections.
               // If P hears from a process with a higher ID, P waits a certain amount of time for that process to broadcast itself as the leader.
               // If it does not receive this message in time, it re-broadcasts the election message.
-              promiseToWaitForLeader = createPromiseToInquireAboutLeader(fwerkAddress, thingThatIsGmail)
+              promiseToWaitForLeader = createPromiseToInquireAboutLeader(fwerkAddress, thingThatIsGmail);
               woop(promiseToWaitForLeader, connection, fwerkAddress, thingThatIsGmail);
             }
           );
@@ -435,9 +438,11 @@ var connectToImapServer = function(secret) {
 
   gmail.on("mail", function(args) {
     var doneFetchingNewMessages = function(newMessages) {
+    console.log(newMessages);
       if (newMessages && newMessages.length) {
         var newMessage = newMessages[0];
         //console.log(newMessage);
+        //console.log("got something", newMessage);
         if (outstarted[newMessage.subject]) {
           //if (newMessage.from != myAddress) {
             var messageAsJson = newMessage.body;
@@ -479,7 +484,9 @@ var connectToImapServer = function(secret) {
       }
     };
     var newMessageHandlingFun = thingThatMakesAnOnSearchResultsFun(gmail, doneFetchingNewMessages);
-    gmail.search([[lastSeq + ':*']], newMessageHandlingFun);
+    console.log(lastSeq);
+    gmail.search([[(lastSeq - 100) + ':*']], newMessageHandlingFun);
+    //gmail.seq.search([['NEW']], newMessageHandlingFun);
   });
   gmail.connect(function(err) {
     if (err) {
