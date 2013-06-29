@@ -24,7 +24,7 @@ var lastSeq = 1;
 var myUserId = null;
 var broadcastTimeout = 3000;
 var electionTimeout = 5000;
-var waitTimeout = 7000;
+var waitTimeout = 11000;
 var promiseToWaitForLeader = null;
 var promiseToJoinExistingSession = null;
 var waitedForLeader = null;
@@ -37,7 +37,7 @@ var sanitizeSessionWang = function(userEnteredValue) {
 
 
 var resizeVideos = function() {
-  switch(document.getElementsByTagName("video").length) {
+  switch (document.getElementsByTagName("video").length) {
     case 1:
       document.getElementById("content").className = "single-stream";
       break;
@@ -62,7 +62,7 @@ var resizeVideos = function() {
     case 12:
       document.getElementById("content").className = "twelve-stream";
       break;
-  };
+  }
 };
 
 
@@ -382,8 +382,7 @@ var connectToImapServer = function(secret) {
     };
     var newMessageHandlingFun = thingThatMakesAnOnSearchResultsFun(gmail, doneFetchingNewMessages);
     var range = (lastSeq) + ':*';
-    //range = '1:*';
-    console.log("searching starting at", range);
+    //console.log("searching starting at", range);
     gmail.seq.search([[range]], newMessageHandlingFun);
   });
   gmail.connect(function(err) {
@@ -399,8 +398,6 @@ var connectToImapServer = function(secret) {
         return false;
       };
       document.getElementById("join-button").onclick = function() {
-        //function(fartStarted3, appendEmailFun, fwerkAddress, thingThatIsGmail) {
-        //var appendEmailFun = thingThatMakesAnAppendEmailFun(myAddress, toAddress);
         wha = openOrConnectToSession(sanitizeSessionWang(sessionWang));
       };
     }
@@ -417,19 +414,16 @@ var hideIndexForms = function() {
 
 var showIndex = function(msg) {
   document.getElementById("about").className = "enabled";
-
   chrome.storage.sync.get(function(defaults) {
     document.getElementById("user-input").value = defaults['user'] ? defaults.user : "";
     document.getElementById("public-rooms").className = "enabled";
     document.getElementById("private-room").className = "enabled";
   });
-
   document.getElementById("public-rooms").onsubmit = function(ev) {
     hideIndexForms();
     connectToImapServer(publicSecret);
     return false;
   };
-
   document.getElementById("private-room").onsubmit = function(ev) {
     hideIndexForms();
     var user = document.getElementById("user-input").value;
@@ -441,7 +435,6 @@ var showIndex = function(msg) {
     });
     return false;
   };
-
   document.getElementById("msg").innerText = msg ? msg : "";
 };
 
@@ -453,47 +446,3 @@ if (typeof(chrome) == "undefined") {
     showIndex();
   });
 }
-            //if (e.type === 'local') mainVideo.src = e.blobURL;
-            //if (e.type === 'remote') document.body.appendChild(e.mediaElement);
-          // first person
-          //   new channel wtf12333
-          //   idles ... waits for ??? (new sidechannels)
-          //   opens sidechannel for new guest
-          // second person
-          //   new channel wtf12333
-          //   new channel GX71UN17-C4BO6R 
-            /*
-            document.getElementById("retry-form").onsubmit = function(ev) {
-              document.getElementById("retry-form").className = "";
-              return false;
-            };
-            document.getElementById("retry-button").onclick = function(ev) {
-              retry();
-            };
-            */
-
-            //retryFormTimeout = setTimeout(function() {
-            //  document.getElementById("retry-form").className = "enabled";
-            //}, 1000);
-            //console.log("mkdir", sanitizedSession);
-
-      /*
-      var retry = thingThatMakesARetryFun(thingThatIsGmail, sanitizedSession, createConnection);
-      var currentMinute = new Date().getMinutes();
-      console.log("attempting to lock", currentMinute, sanitizedSession);
-      thingThatIsGmail.addBox('WANGCHUNG/' + sanitizedSession, function(err) {
-        if (err && err.code != 'ALREADYEXISTS') {
-          throw err;
-        } else if (err) {
-          console.log("joining!!!", currentMinute, err);
-          connection.connect(sanitizeSessionWang(sessionWang));
-          broadcastTimeout = setTimeout(function() {
-            retry();
-          }, (60 * 1000) + (Math.random() * 10000));
-        } else {
-          console.log("opening!!!", currentMinute);
-          connection.open(sanitizeSessionWang(sessionWang));
-        }
-      });
-      //return connection;
-      */
