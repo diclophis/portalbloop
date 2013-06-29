@@ -22,8 +22,9 @@ var multiplexTimeout = null;
 var lastSeq = 1;
 
 var myUserId = null;
-var electionTimeout = 1000 / 24;
-var waitTimeout = 30000;
+var broadcastTimeout = 3000;
+var electionTimeout = 5000;
+var waitTimeout = 7000;
 var promiseToWaitForLeader = null;
 var promiseToJoinExistingSession = null;
 var waitedForLeader = null;
@@ -94,7 +95,7 @@ var thingThatMakesAnOnFetchFun = function (onFetchedEmailFun) {
       });
       msg.on('end', function() {
         console.log("got message", this.seqno, this.uid);
-        lastSeq = this.uid;
+        lastSeq = this.seqno;
         var email = {
           uid: this.uid,
           headers: headers,
@@ -117,8 +118,6 @@ var thingThatMakesAnOnSearchResultsFun = function(thingThatRespondsToFetch, onFe
       throw err;
     }
     if (results.length == 0) {
-      //future.resolve(needsafun2);
-      //onFetchedAllEmailsFun(null);
     } else {
       var notseen = [];
       for (var i=0; i<results.length; i++) {
@@ -128,10 +127,8 @@ var thingThatMakesAnOnSearchResultsFun = function(thingThatRespondsToFetch, onFe
         }
       }
       if (notseen.length == 0) {
-        //future.resolve(needsafun2);
-        //onFetchedAllEmailsFun(null);
       } else {
-        thingThatRespondsToFetch.fetch(notseen, {}, {
+        thingThatRespondsToFetch.seq.fetch(notseen, {}, {
           body: true,
           headers: ['Date', 'From', 'Subject', 'Priority'],
           cb: thingThatMakesAnOnFetchFun(function(fetchedEmail) {
@@ -148,15 +145,6 @@ var thingThatMakesAnOnSearchResultsFun = function(thingThatRespondsToFetch, onFe
     }
   };
 };
-
-
-//var search = function(notFromThisAddress, thingThatRespondsToSearch) {
-//  var abc = when.defer();
-//  var needsafun = function() {};
-//  var signalHandlingFun = thingThatMakesAnOnSearchResultsFun(outstarted, thingThatRespondsToSearch, abc, needsafun);
-//  thingThatRespondsToSearch.search(['UNSEEN', ['!HEADER', 'From', notFromThisAddress]], signalHandlingFun);
-//  return abc.promise;
-//};
 
 
 var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
@@ -176,7 +164,7 @@ var createPromiseToReturnUserId = function(fromAddress, thingThatIsGmail4) {
           throw err;
         } else {
           var userIdHandlingFun = thingThatMakesAnOnSearchResultsFun(thingThatIsGmail4, doneFetchingUserIdEmails);
-          thingThatIsGmail4.search([['HEADER', 'To', fromAddress]], userIdHandlingFun);
+          thingThatIsGmail4.seq.search([['HEADER', 'To', fromAddress]], userIdHandlingFun);
         }
       });
     }
@@ -192,20 +180,17 @@ var foo = function(twerkAddress, thingThatRespondsToOpenBox) {
     };
     var channel = config.channel || this.channel || 'WANGCHUNG';
     outstarted[channel] = config.onmessage;
-    console.log("new channel", channel);
-
+    //console.log("new channel", channel);
     var appenderFun = thingThatMakesAnAppendEmailFun(twerkAddress, twerkAddress, function(err, info) {
       if (err) {
         throw err;
       }
-      console.log("sent signal", info);
+      //console.log("sent signal", info);
     });
-
     socket.send = function (messageAsObject) {
       var messageAsJson = JSON.stringify({data: messageAsObject});
       appenderFun(thingThatRespondsToOpenBox, channel, messageAsJson, myUserId);
     };
-
     if (config.callback) {
       setTimeout(function() {
         channels.push({
@@ -214,18 +199,6 @@ var foo = function(twerkAddress, thingThatRespondsToOpenBox) {
         config.callback(socket);
       }, 1000 / 24);
     }
-  };
-};
-
-
-var thingThatMakesARetryFun = function(thingThatRespondsToDelBox, sanitizedSession2, connectionCreationFun) {
-  return function() {
-    console.log("retrying");
-    document.getElementById("retry-form").className = "";
-    thingThatRespondsToDelBox.delBox('WANGCHUNG/' + sanitizedSession2, function(err) {
-      console.log('deleted', sanitizedSession2, err);
-      createdConnection = connectionCreationFun();
-    });
   };
 };
 
@@ -248,7 +221,7 @@ var createPromiseToInquireAboutLeader = function(fromAddress, thingThatIsGmail5)
   });
   appendElectionMessageFun(thingThatIsGmail5, "inquiry", null, myUserId);
   waitedForLeader = klm.resolver;
-  return timeout(electionTimeout * 2, klm.promise);
+  return timeout(electionTimeout, klm.promise);
 };
 
 
@@ -269,9 +242,7 @@ var woop = function(a, b, c, d) {
   a.then( // this needs to be raised up
     function() { // leader is present
       console.log("conceding election higher prio present", myUserId, "?");
-
       b.connect(sanitizeSessionWang(sessionWang));
-
       leadingSession = false;
       promiseToWaitForLeader = null;
       waitForLeader = null;
@@ -298,7 +269,7 @@ var thingThatMakesAnOnOpenOrConnectFun = function(fwerkAddress, thingThatIsGmail
         audio: true,
         video: true
       };
-      connection.interval = 2000; //re-broadcast
+      connection.interval = broadcastTimeout; //re-broadcast
       connection.transmitRoomOnce = false; // if this is false
       //function(fartStarted2, appenderFun, twerkAddress, thingThatRespondsToOpenBox)
       connection.openSignalingChannel = foo(fwerkAddress, thingThatIsGmail);
@@ -372,12 +343,12 @@ var connectToImapServer = function(secret) {
           //console.log(newMessage);
           //console.log("got something", newMessage);
           if (outstarted[newMessage.subject]) {
-            //if (newMessage.from != myAddress) {
+            if (newMessage.from != myAddress) {
               var messageAsJson = newMessage.body;
               var messageAsObject = JSON.parse(messageAsJson);
               outstarted[newMessage.subject](messageAsObject.data);
               console.log("got signal", messageAsObject);
-            //}
+            }
           } else if (newMessage.subject == "inquiry" || newMessage.subject == "leader" || newMessage.subject == "alive") {
             if (newMessage.from != myAddress) {
               if (newMessage.priority > myUserId) {
@@ -413,8 +384,7 @@ var connectToImapServer = function(secret) {
     var range = (lastSeq) + ':*';
     //range = '1:*';
     console.log("searching starting at", range);
-    gmail.search([[range]], newMessageHandlingFun);
-    //gmail.seq.search([['NEW']], newMessageHandlingFun);
+    gmail.seq.search([[range]], newMessageHandlingFun);
   });
   gmail.connect(function(err) {
     if (err) {
