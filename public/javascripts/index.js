@@ -1,5 +1,6 @@
 //
 //"use strict";
+/*jslint browser: true, node: true, regexp: true, sloppy: true, indent: 2 */
 
 var assert = require('assert');
 var util = require('util');
@@ -180,12 +181,10 @@ var foo = function(twerkAddress, thingThatRespondsToOpenBox) {
     };
     var channel = config.channel || this.channel || 'WANGCHUNG';
     outstarted[channel] = config.onmessage;
-    //console.log("new channel", channel);
     var appenderFun = thingThatMakesAnAppendEmailFun(twerkAddress, twerkAddress, function(err, info) {
       if (err) {
         throw err;
       }
-      //console.log("sent signal", info);
     });
     socket.send = function (messageAsObject) {
       var messageAsJson = JSON.stringify({data: messageAsObject});
